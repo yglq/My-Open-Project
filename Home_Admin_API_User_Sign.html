@@ -1,0 +1,61 @@
+<!-- Home_Admin_API_User_Sign.html -->
+<style>
+    .api-detail-page { display: flex; flex-direction: column; gap: 14px; }
+    .api-detail-topbar { display: flex; align-items: center; gap: 12px; background: #fff; border-radius: 18px; padding: 10px 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+    .api-detail-back { width: 34px; height: 34px; border-radius: 10px; background: #faf7f2; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .api-detail-back:active { background: #e8e3d9; }
+    .api-detail-back svg { width: 18px; height: 18px; color: #8b7355; }
+    .api-detail-title { flex: 1; font-size: 18px; font-weight: 700; }
+    .api-card { background: #fff; border-radius: 16px; padding: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+    .api-section-title { font-size: 13px; font-weight: 700; color: #8b7355; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .api-url { background: #faf7f2; border-radius: 8px; padding: 10px 14px; font-family: monospace; font-size: 13px; color: #1a1a1a; word-break: break-all; margin-bottom: 12px; }
+    .api-method-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; margin-right: 8px; }
+    .method-post { background: #e3f2fd; color: #1565c0; }
+    .api-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 12px; }
+    .api-table th { background: #faf7f2; padding: 8px 10px; text-align: left; font-weight: 600; color: #8b7355; border-bottom: 2px solid #e0d5c1; }
+    .api-table td { padding: 8px 10px; border-bottom: 1px solid #f0ebe0; color: #1a1a1a; }
+    .api-table td.required { color: #c84628; font-weight: 600; }
+    .api-code { background: #1a1a2e; color: #a8d8a8; border-radius: 8px; padding: 14px; font-family: monospace; font-size: 12px; white-space: pre-wrap; word-break: break-all; overflow-x: auto; margin-bottom: 12px; }
+    .api-hint { background: #fef9e7; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #8b6914; border-left: 3px solid #f0c040; }
+</style>
+
+<div class="api-detail-page">
+    <div class="api-detail-topbar">
+        <button class="api-detail-back" onclick="parent.loadSubPage('Home_Admin_API_User.html')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#8b7355" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span class="api-detail-title">签到</span>
+    </div>
+    <div class="api-card">
+        <div class="api-section-title">请求接口</div>
+        <div class="api-url"><span class="api-method-tag method-post">POST</span>URL + /API/user/sign.php</div>
+    </div>
+    <div class="api-card">
+        <div class="api-section-title">请求参数</div>
+        <table class="api-table">
+            <tr><th>参数名</th><th>类型</th><th>必填</th><th>说明</th></tr>
+            <tr><td>ConfigId</td><td>String</td><td class="required">是</td><td>数据库 ID</td></tr>
+            <tr><td>ApiToken</td><td>String</td><td class="required">是</td><td>API 密钥</td></tr>
+            <tr><td>Username</td><td>String</td><td class="required">是</td><td>账号</td></tr>
+            <tr><td>Password</td><td>String</td><td class="required">是</td><td>密码</td></tr>
+        </table>
+    </div>
+    <div class="api-card">
+        <div class="api-section-title">响应</div>
+        <div class="api-section-title" style="font-size:11px;font-weight:400;color:#8b7355;margin-bottom:6px;">成功 (code=0)</div>
+        <div class="api-code">{"code":0,"message":"签到成功","gold":10,"exp":5}</div>
+        <div class="api-section-title" style="font-size:11px;font-weight:400;color:#8b7355;margin-bottom:6px;">失败 (code=1)</div>
+        <div class="api-code">{"code":1,"message":"今日已签到"}</div>
+    </div>
+    <div class="api-card">
+        <div class="api-section-title">提示</div>
+        <div class="api-hint">• 每天只能签到一次<br>• 签到奖励由后台配置决定</div>
+    </div>
+    <div class="api-card">
+        <div class="api-section-title">示例</div>
+        <div class="api-section-title" style="font-size:11px;font-weight:400;color:#8b7355;margin-bottom:6px;">POST 请求</div>
+        <div class="api-code">URL + /API/user/sign.php
+参数：ConfigId=xxx&ApiToken=xxx&Username=xxx&Password=xxx</div>
+        <div class="api-hint" style="margin-top:8px;">💡 替换示例中的参数为实际值即可测试</div>
+    </div>
+</div>

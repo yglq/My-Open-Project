@@ -1,0 +1,28 @@
+<!-- Home_Admin_Custom_Ranking_VarDetail.html -->
+<style>
+    .detail-page { display: flex; flex-direction: column; gap: 14px; }
+    .detail-topbar { display: flex; align-items: center; gap: 12px; background: #fff; border-radius: 18px; padding: 10px 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+    .detail-back { width: 34px; height: 34px; border-radius: 10px; background: #faf7f2; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .detail-back:active { background: #e8e3d9; }
+    .detail-back svg { width: 18px; height: 18px; color: #8b7355; }
+    .detail-title { flex: 1; font-size: 18px; font-weight: 700; }
+
+    .detail-card { background: #fff; border-radius: 18px; padding: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+    .detail-row { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid #f5f0e8; }
+    .detail-rank { width: 28px; font-size: 14px; font-weight: 700; color: #c84628; text-align: center; }
+    .detail-rank.gold { color: #d4a017; }
+    .detail-avatar { width: 36px; height: 36px; border-radius: 10px; object-fit: cover; background: #e8e3d9; }
+    .detail-info { flex: 1; }
+    .detail-name { font-size: 13px; font-weight: 600; }
+    .detail-value { font-size: 12px; color: #8b7355; }
+</style>
+
+<div class="detail-page">
+    <div class="detail-topbar">
+        <button class="detail-back" onclick="parent.loadSubPage('Home_Admin_Custom_Ranking.html')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#8b7355" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span class="detail-title" id="VarDetailTitle">变量详情</span>
+    </div>
+    <div class="detail-card" id="VarDetailList">加载中...</div>
+</div>

@@ -1,0 +1,190 @@
+<!-- Main_Send.html — 只改样式和底部结构 -->
+
+<style>
+    .send-page {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .send-topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #fff;
+        border-radius: 18px;
+        padding: 12px 16px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+        margin-bottom: 14px;
+        position: relative;
+    }
+
+    .send-topbar .title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #1a1a1a;
+    }
+
+    .add-btn-wrap {
+        position: relative;
+    }
+
+    .send-topbar .add-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: #faf7f2;
+        border: none;
+        font-size: 22px;
+        color: #8b7355;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .send-topbar .add-btn:active {
+        background: #e8e3d9;
+    }
+
+    /* 下拉菜单：在+号左边弹出 */
+    .popup-menu {
+        position: absolute;
+        top: 110%;
+        right: 0;
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        padding: 6px 0;
+        min-width: 180px;
+        z-index: 200;
+        display: none;
+        transform-origin: bottom right;
+        animation: popIn 0.2s ease;
+    }
+
+    .popup-menu.show {
+        display: block;
+    }
+
+    @keyframes popIn {
+        from {
+            opacity: 0;
+            transform: scale(0.9);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+
+    .popup-menu .menu-item {
+        padding: 13px 18px;
+        font-size: 14px;
+        font-weight: 500;
+        color: #1a1a1a;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        white-space: nowrap;
+    }
+
+    .popup-menu .menu-item:active {
+        background: #f9f6f0;
+    }
+
+    .popup-menu .menu-item.disabled {
+        color: #ccc;
+        pointer-events: none;
+    }
+
+    /* 消息列表 */
+    .msg-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .msg-item {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        background: #fff;
+        border-radius: 18px;
+        padding: 14px 16px;
+        cursor: pointer;
+        box-shadow: 0 1px 8px rgba(0,0,0,0.03);
+        transition: all 0.2s;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .msg-item:active {
+        background: #f9f6f0;
+    }
+
+    .msg-avatar {
+        width: 52px;
+        height: 52px;
+        border-radius: 16px;
+        object-fit: cover;
+        background: #e8e3d9;
+        flex-shrink: 0;
+    }
+
+    .msg-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .msg-name {
+        font-size: 16px;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin-bottom: 3px;
+    }
+
+    .msg-text {
+        font-size: 13px;
+        color: #8b7355;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .msg-badge {
+        background: #c84628;
+        color: #fff;
+        border-radius: 12px;
+        padding: 2px 8px;
+        font-size: 11px;
+        font-weight: 600;
+        min-width: 20px;
+        text-align: center;
+        flex-shrink: 0;
+    }
+
+    .empty-msg {
+        text-align: center;
+        padding: 40px;
+        color: #b8a48c;
+    }
+</style>
+
+<div class="send-page">
+    <div class="send-topbar">
+        <span class="title">消息</span>
+        <div class="add-btn-wrap">
+            <button class="add-btn" onclick="parent.togglePopupMenu()">+</button>
+            <div class="popup-menu" id="PopupMenu">
+               <div class="menu-item" onclick="parent.closePopupMenu();parent.showSearchPopup();">➕ 添加好友</div> 
+       <div class="menu-item" onclick="parent.closePopupMenu();parent.showGroupCreatePopup();">👥 添加群聊</div>
+             <div class="menu-item disabled">📧 发送邮件 (VIP/SVIP)</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="msg-list" id="MsgList">
+        <div style="text-align:center;padding:30px;color:#b8a48c;">加载中...</div>
+    </div>
+</div>

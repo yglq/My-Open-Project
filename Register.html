@@ -1,0 +1,428 @@
+<!-- Register.html -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>注册 - LQ Cloud Console</title>
+    <style>
+        :root {
+            --bg: #f5f0eb;
+            --card: #ffffff;
+            --text: #2c2416;
+            --sub: #8b7355;
+            --accent: #c84628;
+            --accent-hover: #a33820;
+            --input-bg: #faf7f2;
+            --border: #e0d5c1;
+            --shadow: 0 4px 24px rgba(60, 40, 20, 0.08);
+            --radius: 20px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            -webkit-tap-highlight-color: transparent;
+            background-image:
+                radial-gradient(ellipse at 85% 10%, #e8d5c4 0%, transparent 50%),
+                radial-gradient(ellipse at 15% 90%, #d4c4b0 0%, transparent 40%);
+        }
+
+        /* ========== Main Card ========== */
+        .register-container {
+            width: 100%;
+            max-width: 400px;
+            position: relative;
+        }
+
+        .register-card {
+            background: var(--card);
+            border-radius: 28px;
+            padding: 36px 28px 30px;
+            box-shadow: var(--shadow), 0 0 0 1px rgba(0,0,0,0.03);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Decorative top accent */
+        .register-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 4px;
+            background: var(--accent);
+            border-radius: 0 0 6px 6px;
+            opacity: 0.7;
+        }
+
+        /* ========== Avatar Section ========== */
+        .avatar-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 28px;
+            margin-top: 8px;
+        }
+
+        .avatar-wrapper {
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.25s ease;
+        }
+
+        .avatar-wrapper:active {
+            transform: scale(0.95);
+        }
+
+        .avatar-img {
+            width: 88px;
+            height: 88px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--border);
+            transition: border-color 0.3s ease;
+            background: var(--input-bg);
+            display: block;
+        }
+
+        .avatar-wrapper:hover .avatar-img,
+        .avatar-wrapper.has-image .avatar-img {
+            border-color: var(--accent);
+        }
+
+        .avatar-edit-badge {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            box-shadow: 0 2px 8px rgba(200, 70, 40, 0.3);
+            pointer-events: none;
+        }
+
+        .avatar-hint {
+            margin-top: 8px;
+            font-size: 11px;
+            color: var(--sub);
+            user-select: none;
+            letter-spacing: 0.5px;
+        }
+
+        /* ========== Form ========== */
+        .form-group {
+            margin-bottom: 18px;
+            position: relative;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--sub);
+            margin-bottom: 6px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid var(--border);
+            border-radius: 14px;
+            font-size: 15px;
+            color: var(--text);
+            background: var(--input-bg);
+            transition: all 0.3s ease;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            border-color: var(--accent);
+            background: #fff;
+            box-shadow: 0 0 0 4px rgba(200, 70, 40, 0.06);
+        }
+
+        .form-input::placeholder {
+            color: #c4b8a5;
+        }
+
+        .form-hint {
+            font-size: 10px;
+            color: #b8a48c;
+            margin-top: 4px;
+            letter-spacing: 0.3px;
+        }
+
+        /* ========== Submit Button ========== */
+        .btn-register {
+            width: 100%;
+            padding: 15px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            margin-top: 8px;
+            font-family: inherit;
+        }
+
+        .btn-register:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(200, 70, 40, 0.3);
+        }
+
+        .btn-register:active {
+            transform: scale(0.97);
+            transition: transform 0.1s ease;
+        }
+
+        .btn-register:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        /* ========== Login Link ========== */
+        .login-link {
+            text-align: center;
+            margin-top: 22px;
+            font-size: 13px;
+            color: var(--sub);
+        }
+
+        .login-link a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+            margin-left: 4px;
+        }
+
+        .login-link a:hover {
+            text-decoration: underline;
+        }
+
+        /* ========== Toast ========== */
+        .toast {
+            position: fixed;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-120px);
+            background: #2c2416;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            z-index: 1000;
+            transition: transform 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast.error {
+            background: #c84628;
+        }
+
+        /* ========== Hidden file input ========== */
+        #AvatarInput {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="register-container">
+        <div class="register-card">
+
+            <!-- Avatar -->
+            <div class="avatar-section">
+                <div class="avatar-wrapper" id="AvatarWrapper" onclick="document.getElementById('AvatarInput').click()">
+                    <img src="icon.png" alt="头像" class="avatar-img" id="AvatarPreview">
+                    <div class="avatar-edit-badge">✎</div>
+                </div>
+                <span class="avatar-hint">点击可设置头像</span>
+                <input type="file" id="AvatarInput" accept="image/png" onchange="handleAvatarSelect(event)">
+            </div>
+
+            <!-- Form -->
+            <div class="form-group">
+                <label class="form-label">用户名</label>
+                <input type="text" class="form-input" id="UserName" placeholder="用于登录，4-20位" maxlength="20" autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">昵称</label>
+                <input type="text" class="form-input" id="NickName" placeholder="显示名称" maxlength="30" autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">密码</label>
+                <input type="password" class="form-input" id="Password" placeholder="至少8位，含字母+数字" maxlength="30" autocomplete="new-password">
+                <span class="form-hint">至少8位，必须包含字母和数字</span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">QQ</label>
+                <input type="text" class="form-input" id="QQ" placeholder="选填，联系用" maxlength="15" autocomplete="off">
+            </div>
+
+            <!-- Submit -->
+            <button class="btn-register" id="BtnRegister" onclick="doRegister()">注 册</button>
+
+            <!-- Login Link -->
+            <div class="login-link">
+                已有账号？<a href="login.php">立即登录</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="Toast"></div>
+
+    <script>
+        // ========== 变量 ==========
+        let SelectedAvatarFile = null;  // 选中的头像文件
+
+        // ========== 头像选择 ==========
+        function handleAvatarSelect(event) {
+            const _file = event.target.files[0];
+            if (!_file) return;
+
+            // 仅允许 PNG
+            if (_file.type !== 'image/png') {
+                showToast('请选择 PNG 格式的图片', 'error');
+                event.target.value = '';
+                return;
+            }
+
+            // 限制大小 2MB
+            if (_file.size > 2 * 1024 * 1024) {
+                showToast('图片大小不能超过 2MB', 'error');
+                event.target.value = '';
+                return;
+            }
+
+            SelectedAvatarFile = _file;
+
+            // 预览
+            const _reader = new FileReader();
+            _reader.onload = function(e) {
+                document.getElementById('AvatarPreview').src = e.target.result;
+                document.getElementById('AvatarWrapper').classList.add('has-image');
+            };
+            _reader.readAsDataURL(_file);
+        }
+
+        // ========== 注册 ==========
+        async function doRegister() {
+            const UserName = document.getElementById('UserName').value.trim();
+            const NickName = document.getElementById('NickName').value.trim();
+            const Password = document.getElementById('Password').value;
+            const QQ = document.getElementById('QQ').value.trim();
+
+            // 校验
+            if (!UserName || UserName.length < 4) {
+                showToast('用户名至少4位', 'error');
+                return;
+            }
+            if (!NickName) {
+                showToast('请输入昵称', 'error');
+                return;
+            }
+            if (!validatePassword(Password)) {
+                showToast('密码至少8位，必须包含字母和数字', 'error');
+                return;
+            }
+
+            const _btn = document.getElementById('BtnRegister');
+            _btn.disabled = true;
+            _btn.textContent = '注册中...';
+
+            // 构建 FormData
+            const _formData = new FormData();
+            _formData.append('UserName', UserName);
+            _formData.append('NickName', NickName);
+            _formData.append('Password', Password);
+            _formData.append('QQ', QQ);
+            if (SelectedAvatarFile) {
+                _formData.append('Avatar', SelectedAvatarFile);
+            }
+
+            try {
+                const _response = await fetch('user/register.php', {
+                    method: 'POST',
+                    body: _formData
+                });
+
+                const _result = await _response.json();
+
+                if (_result.code === 0) {
+                    showToast('注册成功！正在跳转...');
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1200);
+                } else {
+                    showToast(_result.message || '注册失败', 'error');
+                    _btn.disabled = false;
+                    _btn.textContent = '注 册';
+                }
+            } catch (_err) {
+                showToast('网络错误，请重试', 'error');
+                _btn.disabled = false;
+                _btn.textContent = '注 册';
+            }
+        }
+
+        // ========== 密码校验 ==========
+        function validatePassword(pwd) {
+            if (pwd.length < 8) return false;
+            const _hasLetter = /[a-zA-Z]/.test(pwd);
+            const _hasNumber = /[0-9]/.test(pwd);
+            return _hasLetter && _hasNumber;
+        }
+
+        // ========== Toast ==========
+        function showToast(msg, type) {
+            const _toast = document.getElementById('Toast');
+            _toast.textContent = msg;
+            _toast.className = 'toast ' + (type || '');
+            _toast.classList.add('show');
+            clearTimeout(_toast._timer);
+            _toast._timer = setTimeout(() => {
+                _toast.classList.remove('show');
+            }, 2500);
+        }
+    </script>
+
+</body>
+</html>

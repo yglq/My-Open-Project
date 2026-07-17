@@ -1,0 +1,161 @@
+<!-- Home_Admin.html -->
+<style>
+    .admin-dashboard {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .admin-topbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: #fff;
+        border-radius: 18px;
+        padding: 12px 16px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    }
+
+    .admin-back {
+        width: 34px; height: 34px; border-radius: 10px;
+        background: #faf7f2; border: none;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; flex-shrink: 0;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .admin-back:active { background: #e8e3d9; }
+    .admin-back svg { width: 18px; height: 18px; color: #8b7355; }
+
+    .admin-server-info { flex: 1; min-width: 0; }
+    .admin-server-label { font-size: 11px; color: #b8a48c; }
+    .admin-server-ip { font-size: 14px; font-weight: 600; color: #1a1a1a; }
+
+    .admin-ping { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+    .admin-ping-dot { width: 8px; height: 8px; border-radius: 50%; background: #4caf50; animation: pingPulse 2s infinite; }
+    @keyframes pingPulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .admin-ping-text { font-size: 12px; color: #4caf50; font-weight: 500; }
+
+    /* 数据库选择器 */
+    .db-selector-row {
+        display: flex; align-items: center; gap: 8px;
+        background: #fff; border-radius: 14px; padding: 10px 14px;
+        box-shadow: 0 1px 8px rgba(0,0,0,0.03);
+    }
+    .db-selector-label { font-size: 12px; color: #8b7355; white-space: nowrap; }
+    .db-selector {
+        flex: 1; padding: 8px 10px; border: 1.5px solid #e0d5c1;
+        border-radius: 10px; font-size: 13px; background: #faf7f2;
+        outline: none; font-family: inherit;
+    }
+
+    .admin-card-grid {
+        display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+    }
+    @media (min-width: 600px) { .admin-card-grid { grid-template-columns: repeat(3, 1fr); gap: 14px; } }
+    @media (min-width: 900px) { .admin-card-grid { grid-template-columns: repeat(4, 1fr); gap: 16px; } }
+
+    .admin-card {
+        background: #fff; border-radius: 18px; padding: 18px 14px;
+        box-shadow: 0 2px 16px rgba(0,0,0,0.04); cursor: pointer;
+        display: flex; flex-direction: row; align-items: center; gap: 12px;
+        transition: all 0.25s ease; -webkit-tap-highlight-color: transparent;
+        min-height: 72px;
+    }
+    .admin-card:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,0,0,0.08); }
+    .admin-card:active { transform: scale(0.97); }
+
+    .admin-card-icon { width: 40px; height: 40px; min-width: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+    .icon-config{background:#eef1ff;color:#4f6ef7} .icon-stats{background:#e8f5e9;color:#43a047}
+    .icon-users{background:#fff3e0;color:#ef6c00} .icon-notice{background:#fce4ec;color:#e91e63}
+    .icon-cardkey{background:#f3e5f5;color:#9c27b0} .icon-docs{background:#e3f2fd;color:#1e88e5}
+    .icon-reserve{background:#f5f5f5;color:#9e9e9e}
+
+    .admin-card-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .admin-card-label { font-size: 14px; font-weight: 600; color: #1a1a1a; line-height: 1.2; }
+    .admin-card-sub { font-size: 11px; color: #999; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+</style>
+
+<div class="admin-dashboard">
+    <!-- Top Bar -->
+    <div class="admin-topbar">
+        <button class="admin-back" onclick="parent.backToHome()" title="返回">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="admin-server-info">
+            <div class="admin-server-label">API 服务器</div>
+            <div class="admin-server-ip">TEST</div>
+        </div>
+        <div class="admin-ping">
+            <span class="admin-ping-dot"></span>
+            <span class="admin-ping-text" id="PingText">1ms</span>
+        </div>
+    </div>
+
+    <!-- 全局数据库选择器 -->
+    <div class="db-selector-row">
+        <span class="db-selector-label">当前数据库</span>
+        <select class="db-selector" id="GlobalDbSelect" onchange="parent.switchGlobalDb()">
+            <option value="">加载中...</option>
+        </select>
+    </div>
+
+    <!-- Card Grid -->
+    <div class="admin-card-grid">
+        <div class="admin-card" onclick="parent.loadSubPage('Home_Admin_Config.html')">
+            <div class="admin-card-icon icon-config">⚙️</div>
+            <div class="admin-card-text"><span class="admin-card-label">配置</span><span class="admin-card-sub">开启/关闭服务</span></div>
+        </div>
+        <div class="admin-card" onclick="parent.loadSubPage('Home_Admin_Stats.html')">
+            <div class="admin-card-icon icon-stats">📊</div>
+            <div class="admin-card-text"><span class="admin-card-label">数据统计</span><span class="admin-card-sub">查看数据</span></div>
+        </div>
+        <div class="admin-card" onclick="parent.loadSubPage('Home_Admin_Users.html')">
+            <div class="admin-card-icon icon-users">👥</div>
+            <div class="admin-card-text"><span class="admin-card-label">用户</span><span class="admin-card-sub">所有子用户</span></div>
+        </div>
+        <div class="admin-card" onclick="parent.loadSubPage('Home_Admin_Notice.html')">
+            <div class="admin-card-icon icon-notice">📢</div>
+            <div class="admin-card-text"><span class="admin-card-label">公告</span><span class="admin-card-sub">远程公告</span></div>
+        </div>
+        <div class="admin-card" onclick="parent.loadSubPage('Home_Admin_CardKey.html')">
+            <div class="admin-card-icon icon-cardkey">🔑</div>
+            <div class="admin-card-text"><span class="admin-card-label">卡密</span><span class="admin-card-sub">无</span></div>
+        </div>
+        <div class="admin-card" onclick="parent.loadSubPage('Home_Admin_Docs.html')">
+            <div class="admin-card-icon icon-docs">📄</div>
+            <div class="admin-card-text"><span class="admin-card-label">文档</span><span class="admin-card-sub">远程文档</span></div>
+        </div>
+<div class="admin-card" onclick="parent.loadSubPage('Home_Admin_Custom.html')">
+    <div class="admin-card-icon" style="background:#f3e5f5;color:#9c27b0;">🧩</div>
+    <div class="admin-card-text"><span class="admin-card-label">自定义</span><span class="admin-card-sub">变量/JSON表</span></div>
+</div>
+        <div class="admin-card" onclick="parent.loadSubPage('Home_Admin_Reserve2.html')">
+            <div class="admin-card-icon icon-reserve">📌</div>
+            <div class="admin-card-text"><span class="admin-card-label">预留</span><span class="admin-card-sub">预留</span></div>
+        </div>
+        <div class="admin-card" onclick="parent.loadSubPage('Home_Admin_Reserve3.html')">
+            <div class="admin-card-icon icon-reserve">📌</div>
+            <div class="admin-card-text"><span class="admin-card-label">预留</span><span class="admin-card-sub">预留</span></div>
+        </div>
+        <div class="admin-card" onclick="parent.loadSubPage('Home_Admin_Reserve4.html')">
+            <div class="admin-card-icon icon-reserve">📌</div>
+            <div class="admin-card-text"><span class="admin-card-label">预留</span><span class="admin-card-sub">预留</span></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function testPing() {
+        const PingEl = document.getElementById('PingText');
+        const Start = Date.now();
+        try {
+            await fetch('ping.php', { method: 'HEAD', cache: 'no-cache' });
+            const Ms = Date.now() - Start;
+            PingEl.textContent = Ms + 'ms';
+            PingEl.style.color = Ms < 100 ? '#4caf50' : Ms < 300 ? '#ff9800' : '#f44336';
+        } catch (_err) {
+            PingEl.textContent = '离线'; PingEl.style.color = '#f44336';
+        }
+    }
+    testPing(); setInterval(testPing, 30000);
+</script>

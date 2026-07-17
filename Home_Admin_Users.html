@@ -1,0 +1,157 @@
+<!-- Home_Admin_Users.html -->
+<style>
+    .users-page {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .users-topbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: #fff;
+        border-radius: 18px;
+        padding: 10px 14px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    }
+
+    .users-back {
+        width: 34px; height: 34px; border-radius: 10px;
+        background: #faf7f2; border: none;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; flex-shrink: 0;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .users-back:active { background: #e8e3d9; }
+    .users-back svg { width: 18px; height: 18px; color: #8b7355; }
+
+    .users-title { flex: 1; font-size: 18px; font-weight: 700; }
+
+    .users-add-btn {
+        width: 34px; height: 34px; border-radius: 10px;
+        background: #faf7f2; border: none;
+        font-size: 22px; color: #8b7355; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .users-add-btn:active { background: #e8e3d9; }
+
+    /* 分页栏 */
+    .pagination-row {
+        display: flex; align-items: center; justify-content: space-between;
+        background: #fff; border-radius: 14px; padding: 8px 14px;
+        box-shadow: 0 1px 8px rgba(0,0,0,0.03);
+    }
+
+    .page-numbers {
+        display: flex; gap: 4px; flex-wrap: wrap;
+    }
+
+    .page-btn {
+        min-width: 32px; height: 32px; border-radius: 8px;
+        background: #faf7f2; border: 1px solid #e0d5c1;
+        font-size: 12px; cursor: pointer; color: #1a1a1a;
+        display: flex; align-items: center; justify-content: center;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .page-btn.active {
+        background: #c84628; color: #fff; border-color: #c84628;
+    }
+
+    .page-btn:disabled { opacity: 0.4; pointer-events: none; }
+
+    .page-size-select {
+        padding: 6px 10px; border: 1.5px solid #e0d5c1;
+        border-radius: 8px; font-size: 12px; background: #faf7f2;
+        outline: none; font-family: inherit;
+    }
+
+    /* 用户列表 */
+    .user-list {
+        display: flex; flex-direction: column; gap: 6px;
+    }
+
+    .user-item {
+        background: #fff; border-radius: 16px; padding: 14px 16px;
+        display: flex; align-items: center; gap: 12px;
+        box-shadow: 0 1px 8px rgba(0,0,0,0.03); cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .user-item:active { background: #f9f6f0; }
+
+    .user-avatar {
+        width: 48px; height: 48px; border-radius: 14px;
+        object-fit: cover; background: #e8e3d9; flex-shrink: 0;
+    }
+
+    .user-info { flex: 1; min-width: 0; }
+
+    .user-info-top {
+        display: flex; align-items: center; gap: 6px; margin-bottom: 3px;
+    }
+
+    .user-gender { font-size: 12px; }
+    .user-username { font-size: 15px; font-weight: 600; }
+    .user-username.banned { color: #000; }
+    .user-icon { font-size: 12px; }
+
+    .user-nickname { font-size: 12px; color: #8b7355; }
+
+    .user-time {
+        text-align: right; flex-shrink: 0; font-size: 11px; color: #b8a48c;
+        display: flex; flex-direction: column; gap: 2px;
+    }
+
+    /* 弹窗 */
+    .overlay {
+        position: fixed; inset: 0; background: rgba(0,0,0,0.3);
+        z-index: 300; display: flex; align-items: flex-end; justify-content: center;
+    }
+    .popup {
+        background: #fff; border-radius: 20px 20px 0 0;
+        padding: 20px 16px 30px; width: 100%; max-width: 500px;
+        max-height: 85vh; overflow-y: auto;
+    }
+    .popup h3 { text-align: center; margin-bottom: 14px; font-size: 16px; }
+    .popup input, .popup select {
+        width: 100%; padding: 10px 12px; border: 1.5px solid #e0d5c1;
+        border-radius: 10px; font-size: 14px; margin-bottom: 10px;
+        background: #faf7f2; outline: none; font-family: inherit; box-sizing: border-box;
+    }
+    .popup input:focus { border-color: #c84628; }
+    .popup button {
+        padding: 10px 20px; border: none; border-radius: 10px;
+        font-weight: 600; cursor: pointer;
+    }
+</style>
+
+<div class="users-page">
+    <!-- 顶部栏 -->
+    <div class="users-topbar">
+        <button class="users-back" onclick="parent.loadSubPage('Home_Admin.html')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#8b7355" stroke-width="2" stroke-linecap="round">
+                <polyline points="15 18 9 12 15 6"/>
+            </svg>
+        </button>
+        <span class="users-title">用户数据</span>
+        <button class="users-add-btn" onclick="parent.showCreateUserPopup()">+</button>
+    </div>
+
+    <!-- 分页栏 -->
+    <div class="pagination-row">
+        <div class="page-numbers" id="PageNumbers"></div>
+        <select class="page-size-select" id="PageSizeSelect" onchange="parent.loadUserList(1)">
+            <option value="10">10条/页</option>
+            <option value="20" selected>20条/页</option>
+            <option value="50">50条/页</option>
+            <option value="100">100条/页</option>
+        </select>
+    </div>
+
+    <!-- 用户列表 -->
+    <div class="user-list" id="UserList">
+        <div style="text-align:center;padding:30px;color:#b8a48c;">加载中...</div>
+    </div>
+</div>

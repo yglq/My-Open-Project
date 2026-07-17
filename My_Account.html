@@ -1,0 +1,143 @@
+<!-- My_Account.html -->
+<style>
+    .account-page {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .account-card {
+        background: #fff;
+        border-radius: 20px;
+        padding: 20px;
+        box-shadow: 0 2px 16px rgba(0,0,0,0.04);
+    }
+
+    .account-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin-bottom: 18px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid rgba(0,0,0,0.06);
+    }
+
+    .form-group {
+        margin-bottom: 16px;
+    }
+
+    .form-label {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        color: #8b7355;
+        margin-bottom: 6px;
+        letter-spacing: 0.5px;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 13px 15px;
+        border: 2px solid #e0d5c1;
+        border-radius: 12px;
+        font-size: 15px;
+        color: #1a1a1a;
+        background: #faf7f2;
+        outline: none;
+        font-family: inherit;
+        transition: all 0.3s ease;
+    }
+
+    .form-input:focus {
+        border-color: #c84628;
+        background: #fff;
+        box-shadow: 0 0 0 4px rgba(200,70,40,0.06);
+    }
+
+    .form-input::placeholder {
+        color: #c4b8a5;
+    }
+
+    .form-hint {
+        font-size: 11px;
+        color: #b8a48c;
+        margin-top: 4px;
+    }
+
+    .btn-submit {
+        width: 100%;
+        padding: 14px;
+        background: #c84628;
+        color: #fff;
+        border: none;
+        border-radius: 14px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        letter-spacing: 1px;
+        transition: all 0.3s ease;
+        font-family: inherit;
+        margin-top: 4px;
+    }
+
+    .btn-submit:active {
+        transform: scale(0.97);
+    }
+
+    .btn-submit:disabled {
+        opacity: 0.5;
+        pointer-events: none;
+    }
+
+    /* Toast */
+    .toast-inline {
+        text-align: center;
+        padding: 10px;
+        border-radius: 12px;
+        font-size: 13px;
+        font-weight: 500;
+        display: none;
+        margin-top: 10px;
+    }
+
+    .toast-inline.success {
+        background: #e8f5e9;
+        color: #2e7d32;
+        display: block;
+    }
+
+    .toast-inline.error {
+        background: #fef2f2;
+        color: #c84628;
+        display: block;
+    }
+</style>
+
+<div class="account-page">
+    <!-- 修改昵称 -->
+    <div class="account-card">
+        <div class="account-title">修改昵称</div>
+        <div class="form-group">
+            <label class="form-label">新昵称</label>
+            <input type="text" class="form-input" id="NewNickname" placeholder="输入新昵称" maxlength="30" autocomplete="off">
+        </div>
+        <button class="btn-submit" id="BtnNickname" onclick="parent.updateNickname()">保存昵称</button>
+        <div class="toast-inline" id="NicknameToast"></div>
+    </div>
+
+    <!-- 修改密码 -->
+    <div class="account-card">
+        <div class="account-title">修改密码</div>
+        <div class="form-group">
+            <label class="form-label">原密码</label>
+            <input type="password" class="form-input" id="OldPassword" placeholder="输入原密码" maxlength="30" autocomplete="current-password">
+        </div>
+        <div class="form-group">
+            <label class="form-label">新密码</label>
+            <input type="password" class="form-input" id="NewPassword" placeholder="至少8位，含字母+数字" maxlength="30" autocomplete="new-password">
+            <span class="form-hint">至少8位，必须包含字母和数字</span>
+        </div>
+        <button class="btn-submit" id="BtnPassword" onclick="parent.updatePassword()">修改密码</button>
+        <div class="toast-inline" id="PasswordToast"></div>
+    </div>
+</div>

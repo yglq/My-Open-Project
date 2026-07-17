@@ -1,0 +1,42 @@
+<!-- My_Database.html -->
+<style>
+    .db-page { display:flex; flex-direction:column; gap:14px; }
+    .db-topbar { display:flex; align-items:center; gap:12px; background:#fff; border-radius:18px; padding:10px 14px; box-shadow:0 2px 12px rgba(0,0,0,0.04); }
+    .db-back { width:34px; height:34px; border-radius:10px; background:#faf7f2; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .db-back:active { background:#e8e3d9; }
+    .db-back svg { width:18px; height:18px; color:#8b7355; }
+    .db-title { flex:1; font-size:18px; font-weight:700; }
+    .db-add-btn { width:34px; height:34px; border-radius:10px; background:#faf7f2; border:none; font-size:22px; color:#8b7355; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+    .db-list { display:flex; flex-direction:column; gap:8px; }
+    .db-item { background:#fff; border-radius:16px; padding:14px 16px; display:flex; align-items:center; gap:12px; box-shadow:0 1px 8px rgba(0,0,0,0.03); }
+    .db-icon { font-size:28px; width:44px; text-align:center; }
+    .db-info { flex:1; min-width:0; }
+    .db-name-line { display:flex; align-items:center; gap:8px; }
+    .db-name { font-size:15px; font-weight:600; }
+    .db-owner { font-size:12px; color:#8b7355; }
+    .db-detail { font-size:11px; color:#b8a48c; margin-top:2px; }
+    .db-actions { display:flex; gap:8px; flex-shrink:0; }
+    .btn-remove { padding:6px 14px; background:#fff; border:1px solid #fecaca; border-radius:10px; color:#c84628; font-size:12px; cursor:pointer; }
+    .btn-tokey { padding:6px 14px; background:#faf7f2; border:1px solid #e0d5c1; border-radius:10px; font-size:12px; cursor:pointer; }
+    .overlay { position:fixed; inset:0; background:rgba(0,0,0,0.3); z-index:300; display:flex; align-items:center; justify-content:center; }
+    .popup { background:#fff; border-radius:20px; padding:20px; width:90%; max-width:360px; }
+    .popup input { width:100%; padding:10px; border:1px solid #e0d5c1; border-radius:10px; margin-bottom:10px; font-size:14px; box-sizing:border-box; }
+    .popup button { padding:10px 20px; border:none; border-radius:10px; font-weight:600; cursor:pointer; }
+    .dice-btn { background:#faf7f2; border:1px solid #e0d5c1; border-radius:8px; padding:8px 12px; cursor:pointer; font-size:18px; margin-left:8px; }
+</style>
+
+<div class="db-page">
+    <div class="db-topbar">
+        <button class="db-back" onclick="parent.backToMy()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#8b7355" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span class="db-title">数据库管理</span>
+        <button class="db-add-btn" onclick="showJoinPopup()">+</button>
+    </div>
+    <div class="db-list" id="DbList">加载中...</div>
+    <button style="margin-top:8px;padding:12px;background:#c84628;color:#fff;border:none;border-radius:14px;font-weight:600;cursor:pointer;" onclick="showCreatePopup()">+ 创建新数据库</button>
+</div>
+
+<script>
+    // 由 index.html 调用加载列表
+</script>

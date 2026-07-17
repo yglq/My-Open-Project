@@ -1,0 +1,80 @@
+<!-- Home_Admin_API.html -->
+<style>
+    .api-page {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .api-topbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: #fff;
+        border-radius: 18px;
+        padding: 10px 14px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    }
+
+    .api-back {
+        width: 34px; height: 34px; border-radius: 10px;
+        background: #faf7f2; border: none;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; flex-shrink: 0;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .api-back:active { background: #e8e3d9; }
+    .api-back svg { width: 18px; height: 18px; color: #8b7355; }
+
+    .api-title { flex: 1; font-size: 18px; font-weight: 700; }
+
+    .api-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .api-item {
+        background: #fff;
+        border-radius: 16px;
+        padding: 16px 14px;
+        text-align: center;
+        font-size: 14px;
+        font-weight: 600;
+        color: #1a1a1a;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .api-item:active {
+        background: #f9f6f0;
+        transform: scale(0.97);
+    }
+
+    .api-item.placeholder {
+        color: #b8a48c;
+        font-weight: 400;
+        cursor: default;
+    }
+</style>
+
+<div class="api-page">
+    <div class="api-topbar">
+        <button class="api-back" onclick="parent.loadSubPage('Home_Admin.html')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#8b7355" stroke-width="2" stroke-linecap="round">
+                <polyline points="15 18 9 12 15 6"/>
+            </svg>
+        </button>
+        <span class="api-title">API 文档</span>
+    </div>
+
+    <div class="api-grid">
+        <div class="api-item" onclick="parent.loadSubPage('Home_Admin_API_User.html')">用户系统</div>
+<div class="api-item" onclick="parent.loadSubPage('Home_Admin_API_Notice.html')">公告系统</div>
+        <div class="api-item" onclick="parent.loadSubPage('Home_Admin_API_CardKey.html')">卡密系统</div>
+        <div class="api-item placeholder">文档系统</div>
+        <div class="api-item placeholder">文件系统</div>
+    </div>
+</div>

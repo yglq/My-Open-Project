@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>登录 - LQ Cloud Console</title>
+    <style>
+        :root {
+            --bg: #f5f0eb;
+            --card: #ffffff;
+            --text: #2c2416;
+            --sub: #8b7355;
+            --accent: #c84628;
+            --accent-hover: #a33820;
+            --input-bg: #faf7f2;
+            --border: #e0d5c1;
+            --shadow: 0 4px 24px rgba(60,40,20,0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            -webkit-tap-highlight-color: transparent;
+            background-image:
+                radial-gradient(ellipse at 85% 10%, #e8d5c4 0%, transparent 50%),
+                radial-gradient(ellipse at 15% 90%, #d4c4b0 0%, transparent 40%);
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-card {
+            background: var(--card);
+            border-radius: 28px;
+            padding: 40px 28px 32px;
+            box-shadow: var(--shadow), 0 0 0 1px rgba(0,0,0,0.03);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 4px;
+            background: var(--accent);
+            border-radius: 0 0 6px 6px;
+            opacity: 0.7;
+        }
+
+        /* Logo */
+        .logo-section {
+            text-align: center;
+            margin-bottom: 32px;
+            margin-top: 8px;
+        }
+
+        .logo-img {
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            object-fit: contain;
+            background: var(--input-bg);
+            padding: 8px;
+            margin-bottom: 12px;
+        }
+
+        .logo-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: 1px;
+        }
+
+        /* Form */
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--sub);
+            margin-bottom: 6px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid var(--border);
+            border-radius: 14px;
+            font-size: 15px;
+            color: var(--text);
+            background: var(--input-bg);
+            transition: all 0.3s ease;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            border-color: var(--accent);
+            background: #fff;
+            box-shadow: 0 0 0 4px rgba(200,70,40,0.06);
+        }
+
+        .form-input::placeholder {
+            color: #c4b8a5;
+        }
+
+        /* Button */
+        .btn-login {
+            width: 100%;
+            padding: 15px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            margin-top: 8px;
+            font-family: inherit;
+        }
+
+        .btn-login:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(200,70,40,0.3);
+        }
+
+        .btn-login:active {
+            transform: scale(0.97);
+        }
+
+        .btn-login:disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        /* Register Link */
+        .register-link {
+            text-align: center;
+            margin-top: 22px;
+            font-size: 13px;
+            color: var(--sub);
+        }
+
+        .register-link a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+            margin-left: 4px;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-120px);
+            background: #2c2416;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            z-index: 1000;
+            transition: transform 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            pointer-events: none;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast.error {
+            background: #c84628;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-container">
+        <div class="login-card">
+
+            <!-- Logo -->
+            <div class="logo-section">
+                <img src="icon.png" alt="Logo" class="logo-img" onerror="this.style.display='none'">
+                <div class="logo-title">LQ Cloud Console</div>
+            </div>
+
+            <!-- Form -->
+            <div class="form-group">
+                <label class="form-label">用户名</label>
+                <input type="text" class="form-input" id="UserName" placeholder="请输入用户名" autocomplete="username" maxlength="20">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">密码</label>
+                <input type="password" class="form-input" id="Password" placeholder="请输入密码" autocomplete="current-password" maxlength="30">
+            </div>
+
+            <button class="btn-login" id="BtnLogin" onclick="doLogin()">登 录</button>
+
+            <div class="register-link">
+                没有账号？<a href="Register.html">立即注册</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="Toast"></div>
+
+    <script>
+        // 回车键登录
+        document.getElementById('Password').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') doLogin();
+        });
+
+        async function doLogin() {
+            const UserName = document.getElementById('UserName').value.trim();
+            const Password = document.getElementById('Password').value;
+
+            if (!UserName) {
+                showToast('请输入用户名', 'error');
+                return;
+            }
+            if (!Password) {
+                showToast('请输入密码', 'error');
+                return;
+            }
+
+            const _btn = document.getElementById('BtnLogin');
+            _btn.disabled = true;
+            _btn.textContent = '登录中...';
+
+            const _formData = new FormData();
+            _formData.append('UserName', UserName);
+            _formData.append('Password', Password);
+
+            try {
+                const _response = await fetch('user/login.php', {
+                    method: 'POST',
+                    body: _formData
+                });
+
+                const _result = await _response.json();
+
+                if (_result.code === 0) {
+                    // 存登录标识
+                    localStorage.setItem('UserId', _result.userId);
+                    localStorage.setItem('UserName', _result.userName);
+localStorage.setItem('Password', Password);  // 存用户输入的明文密码，供 check_login 校验
+                    showToast('登录成功，正在跳转...');
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 800);
+                } else {
+                    showToast(_result.message || '登录失败', 'error');
+                    _btn.disabled = false;
+                    _btn.textContent = '登 录';
+                }
+            } catch (_err) {
+                showToast('网络错误，请重试', 'error');
+                _btn.disabled = false;
+                _btn.textContent = '登 录';
+            }
+        }
+
+        function showToast(msg, type) {
+            const _toast = document.getElementById('Toast');
+            _toast.textContent = msg;
+            _toast.className = 'toast ' + (type || '');
+            _toast.classList.add('show');
+            clearTimeout(_toast._timer);
+            _toast._timer = setTimeout(() => {
+                _toast.classList.remove('show');
+            }, 2500);
+        }
+    </script>
+
+</body>
+</html>

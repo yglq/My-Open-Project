@@ -1,0 +1,206 @@
+<!-- Home_Admin_Notice.html -->
+<style>
+    .notice-page {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .notice-topbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: #fff;
+        border-radius: 18px;
+        padding: 10px 14px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    }
+
+    .notice-back {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: #faf7f2;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .notice-back:active { background: #e8e3d9; }
+
+    .notice-back svg {
+        width: 18px;
+        height: 18px;
+        color: #8b7355;
+    }
+
+    .notice-title {
+        flex: 1;
+        font-size: 18px;
+        font-weight: 700;
+    }
+
+    .notice-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 18px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    }
+
+    .notice-textarea {
+        width: 100%;
+        min-height: 200px;
+        padding: 14px;
+        border: 2px solid #e0d5c1;
+        border-radius: 14px;
+        font-size: 15px;
+        color: #1a1a1a;
+        background: #faf7f2;
+        outline: none;
+        font-family: inherit;
+        resize: vertical;
+        box-sizing: border-box;
+        transition: all 0.3s ease;
+    }
+
+    .notice-textarea:focus {
+        border-color: #c84628;
+        background: #fff;
+        box-shadow: 0 0 0 4px rgba(200,70,40,0.06);
+    }
+
+    .notice-textarea::placeholder {
+        color: #c4b8a5;
+    }
+
+    .config-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 0;
+    }
+
+    .config-row + .config-row {
+        border-top: 1px solid rgba(0,0,0,0.04);
+    }
+
+    .config-label {
+        font-size: 13px;
+        color: #1a1a1a;
+        font-weight: 500;
+    }
+
+    .toggle {
+        position: relative;
+        width: 44px;
+        height: 26px;
+        flex-shrink: 0;
+    }
+
+    .toggle input { display: none; }
+
+    .toggle-slider {
+        position: absolute;
+        inset: 0;
+        background: #d4c8b8;
+        border-radius: 13px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .toggle-slider::before {
+        content: '';
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 20px;
+        height: 20px;
+        background: #fff;
+        border-radius: 50%;
+        transition: all 0.3s ease;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    }
+
+    .toggle input:checked + .toggle-slider {
+        background: #c84628;
+    }
+
+    .toggle input:checked + .toggle-slider::before {
+        transform: translateX(18px);
+    }
+
+    .btn-publish {
+        width: 100%;
+        padding: 14px;
+        background: #c84628;
+        color: #fff;
+        border: none;
+        border-radius: 14px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        letter-spacing: 1px;
+        transition: all 0.2s ease;
+        font-family: inherit;
+    }
+
+    .btn-publish:active { transform: scale(0.97); }
+    .btn-publish:disabled { opacity: 0.5; pointer-events: none; }
+
+    .toast-inline {
+        text-align: center;
+        padding: 10px;
+        border-radius: 12px;
+        font-size: 13px;
+        font-weight: 500;
+        display: none;
+        margin-top: 10px;
+    }
+
+    .toast-inline.success { background: #e8f5e9; color: #2e7d32; display: block; }
+    .toast-inline.error   { background: #fef2f2; color: #c84628; display: block; }
+</style>
+
+<div class="notice-page">
+    <!-- 返回栏 -->
+    <div class="notice-topbar">
+        <button class="notice-back" onclick="parent.loadSubPage('Home_Admin.html')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#8b7355" stroke-width="2" stroke-linecap="round">
+                <polyline points="15 18 9 12 15 6"/>
+            </svg>
+        </button>
+        <span class="notice-title">公告系统</span>
+    </div>
+
+    <!-- 输入框 -->
+    <div class="notice-card">
+        <textarea class="notice-textarea" id="NoticeContent" placeholder="输入公告内容"></textarea>
+    </div>
+
+    <!-- 发布按钮 -->
+    <button class="btn-publish" id="BtnPublish" onclick="parent.publishNotice()">发 布</button>
+
+    <!-- 开关 -->
+    <div class="notice-card">
+        <div class="config-row">
+            <span class="config-label">API获取公告</span>
+            <label class="toggle">
+                <input type="checkbox" id="NoticeSwitch">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        <div class="config-row">
+            <span class="config-label">可API修改公告</span>
+            <label class="toggle">
+                <input type="checkbox" id="NoticeApiSwitch">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        <button class="btn-publish" style="margin-top:10px;background:#8b7355;" onclick="parent.saveNoticeSettings()">保存开关设置</button>
+    </div>
+
+    <div class="toast-inline" id="NoticeToast"></div>
+</div>

@@ -1,0 +1,449 @@
+<!-- Send_Chat.html -->
+<style>
+    .chat-page {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 200px);
+        min-height: 400px;
+    }
+
+    /* ========== Top Bar ========== */
+    .chat-topbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: #fff;
+        border-radius: 18px;
+        padding: 10px 14px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+        flex-shrink: 0;
+        margin-bottom: 10px;
+    }
+
+    .chat-back {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: #faf7f2;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        flex-shrink: 0;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .chat-back:active {
+        background: #e8e3d9;
+    }
+
+    .chat-back svg {
+        width: 18px;
+        height: 18px;
+        color: #8b7355;
+    }
+
+    .chat-name {
+        flex: 1;
+        font-size: 16px;
+        font-weight: 700;
+    }
+
+    .chat-name.white  { color: #1a1a1a; }
+    .chat-name.blue   { color: #2563eb; }
+    .chat-name.purple { color: #7c3aed; }
+    .chat-name.red    { color: #dc2626; }
+
+    .chat-count {
+        font-size: 12px;
+        color: #8b7355;
+        flex-shrink: 0;
+    }
+
+    .chat-detail-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: #faf7f2;
+        border: none;
+        font-size: 20px;
+        color: #8b7355;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        flex-shrink: 0;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ========== Messages Area ========== */
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 8px 0;
+        display: flex;
+        flex-direction: column-reverse;
+        gap: 10px;
+    }
+
+    .msg-row {
+        display: flex;
+        align-items: flex-end;
+        gap: 8px;
+        animation: msgIn 0.25s ease;
+    }
+
+    .msg-row.mine {
+        flex-direction: row-reverse;
+    }
+
+    @keyframes msgIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .msg-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 12px;
+        object-fit: cover;
+        background: #e8e3d9;
+        flex-shrink: 0;
+    }
+
+    .msg-bubble {
+        max-width: 100%;
+        background: #fff;
+        border-radius: 16px;
+        padding: 10px 14px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        transform: rotate(0.3deg);
+        position: relative;
+    }
+
+    .msg-row.mine .msg-bubble {
+        background: #faf7f2;
+        border: 1.5px solid #e0d5c1;
+    }
+
+    .msg-text {
+        font-size: 15px;
+        color: #1a1a1a;
+        word-break: break-word;
+        line-height: 1.5;
+    }
+
+    .msg-image {
+        max-width: 45vw;
+        max-height: 200px;
+        border-radius: 10px;
+        object-fit: contain;
+        cursor: pointer;
+    }
+
+    .msg-coin {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .msg-coin-icon {
+        font-size: 28px;
+    }
+
+    .msg-coin-num {
+        font-size: 16px;
+        font-weight: 700;
+        color: #d4a017;
+    }
+
+    .msg-coin-btn {
+        padding: 6px 20px;
+        background: #c84628;
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .msg-coin-btn:active {
+        transform: scale(0.95);
+    }
+
+    .msg-coin-btn.done {
+        background: #ccc;
+        pointer-events: none;
+    }
+
+    .msg-studio {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .msg-studio-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        object-fit: cover;
+        background: #e8e3d9;
+    }
+
+    .msg-studio-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .msg-studio-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1a1a1a;
+    }
+
+    .msg-studio-id {
+        font-size: 11px;
+        color: #b8a48c;
+    }
+
+    .msg-studio-btn {
+        padding: 6px 20px;
+        background: #4f6ef7;
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .msg-studio-btn:active {
+        transform: scale(0.95);
+    }
+
+    .msg-studio-btn.done {
+        background: #ccc;
+        pointer-events: none;
+    }
+
+    .msg-time {
+        font-size: 10px;
+        color: #b8a48c;
+        margin-top: 4px;
+    }
+
+    .msg-read {
+        font-size: 10px;
+        color: #4caf50;
+        cursor: pointer;
+        margin-top: 2px;
+    }
+
+    .msg-read.zero {
+        color: #b8a48c;
+    }
+
+    /* ========== Bottom Bar ========== */
+    .chat-bottom {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: #fff;
+        border-radius: 18px;
+        padding: 8px 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+        flex-shrink: 0;
+        margin-top: 10px;
+    }
+
+    .chat-input {
+        flex: 1;
+        border: none;
+        outline: none;
+        font-size: 15px;
+        padding: 8px 4px;
+        background: transparent;
+        font-family: inherit;
+    }
+
+    .chat-plus-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: #faf7f2;
+        border: none;
+        font-size: 20px;
+        color: #8b7355;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        flex-shrink: 0;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ========== Plus Menu ========== */
+    .plus-menu {
+        position: fixed;
+        bottom: 100px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+        padding: 12px;
+        display: none;
+        z-index: 300;
+        gap: 12px;
+        flex-wrap: wrap;
+        width: 90%;
+        max-width: 380px;
+        justify-content: center;
+    }
+
+    .plus-menu.show {
+        display: flex;
+    }
+
+    .plus-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        padding: 10px 16px;
+        border-radius: 12px;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .plus-item:active {
+        background: #f9f6f0;
+    }
+
+    .plus-item-icon {
+        font-size: 28px;
+    }
+
+    .plus-item-label {
+        font-size: 11px;
+        color: #8b7355;
+    }
+
+    .overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.2);
+        z-index: 299;
+        display: none;
+    }
+
+    .overlay.show {
+        display: block;
+    }
+
+    /* ========== Read List Popup ========== */
+    .read-list-popup {
+        position: fixed;
+        bottom: 50%;
+        left: 50%;
+        transform: translate(-50%, 50%);
+        background: #fff;
+        border-radius: 20px;
+        padding: 20px;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+        z-index: 301;
+        display: none;
+        min-width: 240px;
+        max-height: 60vh;
+        overflow-y: auto;
+    }
+
+    .read-list-popup.show {
+        display: block;
+    }
+
+    .read-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 0;
+    }
+
+    .read-item + .read-item {
+        border-top: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .read-item-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        object-fit: cover;
+        background: #e8e3d9;
+    }
+
+    .read-item-name {
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .empty-chat {
+        text-align: center;
+        color: #b8a48c;
+        padding: 40px;
+    }
+</style>
+
+<div class="chat-page">
+    <!-- Top Bar -->
+    <div class="chat-topbar">
+<button class="chat-back" onclick="parent.backToSendList()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span class="chat-name white" id="ChatName">加载中...</span>
+        <span class="chat-count" id="ChatCount" style="display:none;"></span>
+        <button class="chat-detail-btn" id="ChatDetailBtn" style="display:none;" onclick="parent.openGroupDetail()">≡</button>
+    </div>
+
+    <!-- Messages -->
+    <div class="chat-messages" id="ChatMessages">
+        <div class="empty-chat">加载中...</div>
+    </div>
+
+    <!-- Bottom -->
+    <div class="chat-bottom">
+        <input type="text" class="chat-input" id="ChatInput" placeholder="输入消息..." maxlength="500">
+        <button class="chat-plus-btn" onclick="parent.togglePlusMenu()">+</button>
+    </div>
+
+    <!-- Plus Menu -->
+    <div class="overlay" id="PlusOverlay" onclick="parent.closePlusMenu()"></div>
+    <div class="plus-menu" id="PlusMenu">
+        <div class="plus-item" onclick="parent.sendImage()">
+            <span class="plus-item-icon">🖼️</span>
+            <span class="plus-item-label">图片</span>
+        </div>
+        <div class="plus-item" onclick="parent.sendCoinMenu()">
+            <span class="plus-item-icon">💰</span>
+            <span class="plus-item-label">赠送金币</span>
+        </div>
+        <div class="plus-item" onclick="parent.requestCoinMenu()">
+            <span class="plus-item-icon">💸</span>
+            <span class="plus-item-label">索要金币</span>
+        </div>
+        <div class="plus-item" onclick="parent.inviteStudioMenu()">
+            <span class="plus-item-icon">🏢</span>
+            <span class="plus-item-label">邀请工作室</span>
+        </div>
+    </div>
+
+    <!-- Read List Popup -->
+    <div class="read-list-popup" id="ReadListPopup"></div>
+
+    <input type="file" id="ImageInput" accept="image/*" style="display:none;" onchange="parent.handleImageSend(event)">
+</div>

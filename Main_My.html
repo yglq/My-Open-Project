@@ -1,0 +1,313 @@
+<!-- Main_My.html -->
+<style>
+    .my-page {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    /* ========== Profile Card ========== */
+    .profile-card {
+        background: linear-gradient(135deg, #fafaf8 0%, #f2efe9 40%, #e8e3d9 100%);
+        border-radius: 24px;
+        padding: 24px 20px;
+        position: relative;
+        box-shadow:
+            0 8px 32px rgba(0,0,0,0.06),
+            inset 0 1px 0 rgba(255,255,255,0.8);
+        overflow: hidden;
+    }
+
+    .profile-card::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+            radial-gradient(ellipse at 70% 20%, rgba(255,255,255,0.6) 0%, transparent 60%),
+            radial-gradient(ellipse at 30% 80%, rgba(0,0,0,0.03) 0%, transparent 50%);
+        pointer-events: none;
+    }
+
+    .profile-top {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .profile-avatar {
+        width: 72px;
+        height: 72px;
+        border-radius: 22px;
+        object-fit: cover;
+        border: 2px solid rgba(255,255,255,0.9);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        background: #e8e3d9;
+        flex-shrink: 0;
+    }
+
+    .profile-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .profile-name-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 4px;
+    }
+
+    .profile-nickname {
+        font-size: 20px;
+        font-weight: 700;
+        color: #1a1a1a;
+    }
+
+    .profile-badge {
+        font-size: 10px;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: 6px;
+        letter-spacing: 1px;
+        display: none;
+    }
+
+    .badge-vip {
+        background: linear-gradient(135deg, #f5d061, #e6b422);
+        color: #5a3e00;
+        display: inline-block;
+    }
+
+    .badge-svip {
+        background: linear-gradient(135deg, #e8c97a, #d4a017, #c8920e);
+        color: #3d2000;
+        display: inline-block;
+    }
+
+    .profile-bio {
+        font-size: 13px;
+        color: #8b7355;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 10px;
+    }
+
+    .profile-level-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+    }
+
+    .profile-level {
+        font-weight: 700;
+        font-size: 13px;
+        padding: 2px 10px;
+        border-radius: 10px;
+    }
+
+    .lv-white  { background: #e8e8e8; color: #666; }
+    .lv-blue   { background: #dbeafe; color: #2563eb; }
+    .lv-purple { background: #ede9fe; color: #7c3aed; }
+    .lv-gold   { background: #fef3c7; color: #b45309; }
+    .lv-red    { background: #fee2e2; color: #dc2626; }
+
+    .profile-exp-bar {
+        flex: 1;
+        height: 6px;
+        background: rgba(0,0,0,0.06);
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    .profile-exp-fill {
+        height: 100%;
+        background: #c84628;
+        border-radius: 3px;
+        transition: width 0.5s ease;
+    }
+
+    .profile-gold {
+        font-size: 13px;
+        color: #d4a017;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .profile-settings {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        width: 36px;
+        height: 36px;
+        border-radius: 12px;
+        background: rgba(255,255,255,0.7);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(0,0,0,0.06);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 2;
+        transition: all 0.2s ease;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .profile-settings:active {
+        transform: scale(0.93);
+        background: rgba(255,255,255,0.95);
+    }
+
+    .profile-settings svg {
+        width: 18px;
+        height: 18px;
+        color: #8b7355;
+    }
+
+    /* ========== Menu List ========== */
+    .menu-card {
+        background: #fff;
+        border-radius: 20px;
+        padding: 4px 0;
+        box-shadow: 0 2px 16px rgba(0,0,0,0.04);
+        overflow: hidden;
+    }
+
+    .menu-item {
+        display: flex;
+        align-items: center;
+        padding: 15px 20px;
+        cursor: pointer;
+        transition: background 0.15s ease;
+        -webkit-tap-highlight-color: transparent;
+        gap: 12px;
+    }
+
+    .menu-item:active {
+        background: #f9f6f0;
+    }
+
+    .menu-item + .menu-item {
+        border-top: 1px solid rgba(0,0,0,0.04);
+    }
+
+    .menu-icon {
+        width: 22px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        flex-shrink: 0;
+    }
+
+    .menu-label {
+        flex: 1;
+        font-size: 15px;
+        font-weight: 500;
+        color: #1a1a1a;
+    }
+
+    .menu-arrow {
+        color: #c4b8a5;
+        font-size: 16px;
+    }
+
+    /* ========== Logout ========== */
+    .logout-wrap {
+        text-align: center;
+        margin-top: 8px;
+    }
+
+    .btn-logout {
+        display: inline-block;
+        padding: 12px 48px;
+        background: #fff;
+        border: 1px solid rgba(0,0,0,0.08);
+        border-radius: 14px;
+        color: #c84628;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn-logout:active {
+        background: #fef2f2;
+        border-color: #fecaca;
+    }
+</style>
+
+<div class="my-page" id="MyPage">
+    <!-- Profile Card -->
+    <div class="profile-card">
+        <div class="profile-settings" title="设置">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+            </svg>
+        </div>
+
+        <div class="profile-top">
+            <img src="icon.png" alt="头像" class="profile-avatar" id="MyAvatar" onerror="this.src='icon.png'">
+            <div class="profile-info">
+                <div class="profile-name-row">
+                    <span class="profile-nickname" id="MyNickname">加载中...</span>
+                    <span class="profile-badge" id="MyBadge">VIP</span>
+                </div>
+                <div class="profile-bio" id="MyBio">这个人很懒，什么都没写</div>
+                <div class="profile-level-row">
+                    <span class="profile-level lv-white" id="MyLevel">Lv.1</span>
+                    <div class="profile-exp-bar">
+                        <div class="profile-exp-fill" id="MyExpBar" style="width:0%;"></div>
+                    </div>
+                </div>
+                <div class="profile-gold">
+                    💰 <span id="MyGold">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Menu -->
+    <div class="menu-card">
+ <div class="menu-item" onclick="delete parent.subPageCache['My_Database.html'];parent.loadSubPage('My_Database.html').then(()=>()=>parent.loadDbList(),300);">
+    <span class="menu-icon">🗄️</span>
+    <span class="menu-label">数据库管理</span>
+    <span class="menu-arrow">›</span>
+</div>
+        <div class="menu-item" onclick="parent.loadSubPage('My_Account.html')">
+           <span class="menu-icon">🔒</span>
+           <span class="menu-label">账号与安全</span>
+           <span class="menu-arrow">›</span>
+        </div>
+
+       <div class="menu-item" onclick="window.open('http://lingqiankj.top', '_blank')">
+   
+        <span class="menu-icon">👥</span>
+    <span class="menu-label">官网</span>
+    <span class="menu-arrow">›</span>
+      </div>
+     <div class="menu-item">
+            <span class="menu-icon">👑</span>
+            <span class="menu-label">会员介绍</span>
+            <span class="menu-arrow">›</span>
+        </div>
+        <div class="menu-item">
+            <span class="menu-icon">📋</span>
+            <span class="menu-label">关于</span>
+            <span class="menu-arrow">›</span>
+        </div>
+    </div>
+
+    <!-- Logout -->
+    <div class="logout-wrap">
+        <button class="btn-logout" onclick="parent.doLogout()">退出登录</button>
+    </div>
+</div>

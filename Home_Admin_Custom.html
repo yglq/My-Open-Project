@@ -1,0 +1,108 @@
+<!-- Home_Admin_Custom.html -->
+<style>
+    .custom-page { display: flex; flex-direction: column; gap: 14px; }
+
+    .custom-topbar { display: flex; align-items: center; gap: 12px; background: #fff; border-radius: 18px; padding: 10px 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+    .custom-back { width: 34px; height: 34px; border-radius: 10px; background: #faf7f2; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .custom-back:active { background: #e8e3d9; }
+    .custom-back svg { width: 18px; height: 18px; color: #8b7355; }
+    .custom-title { flex: 1; font-size: 18px; font-weight: 700; }
+
+    .custom-card { background: #fff; border-radius: 18px; padding: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+    .card-title { font-size: 14px; font-weight: 700; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #f0ebe0; display: flex; align-items: center; justify-content: space-between; }
+    .card-title-text { display: flex; align-items: center; gap: 6px; }
+    .toggle-icon { font-size: 14px; cursor: pointer; color: #8b7355; transition: transform 0.2s; }
+    .toggle-icon.expanded { transform: rotate(90deg); }
+
+    .var-item { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid #f5f0e8; flex-wrap: wrap; }
+    .var-index { width: 24px; font-size: 12px; color: #b8a48c; text-align: center; flex-shrink: 0; }
+    .var-name { font-weight: 600; font-size: 13px; min-width: 60px; color: #1a1a1a; }
+    .var-value { font-size: 12px; color: #8b7355; margin-left: 4px; }
+    .var-actions { margin-left: auto; display: flex; gap: 4px; }
+    .btn-sm { padding: 4px 8px; border-radius: 6px; font-size: 11px; border: 1px solid #e0d5c1; background: #fff; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .btn-sm.red { color: #c84628; border-color: #fecaca; }
+    .btn-sm:active { background: #f5f0e8; }
+    .btn-sm:disabled { opacity: 0.4; pointer-events: none; }
+
+    .add-row { display: flex; gap: 6px; margin-top: 10px; align-items: center; flex-wrap: wrap; }
+    .add-row input { padding: 6px 10px; border: 1px solid #e0d5c1; border-radius: 8px; font-size: 12px; width: 80px; outline: none; font-family: inherit; }
+    .add-row input:focus { border-color: #c84628; }
+    .btn-add { padding: 6px 14px; background: #c84628; color: #fff; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
+
+    .tbl-container { margin-bottom: 10px; background: #faf7f2; border-radius: 10px; padding: 10px; }
+    .tbl-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .tbl-name { font-weight: 600; font-size: 13px; }
+    .tbl-cols { font-size: 11px; color: #8b7355; margin-left: 32px; }
+    .tbl-row { display: flex; align-items: center; gap: 6px; padding: 4px 0; margin-left: 32px; }
+    .tbl-row input { padding: 4px 8px; border: 1px solid #e0d5c1; border-radius: 6px; font-size: 11px; width: 60px; outline: none; }
+
+    .danger-zone { display: flex; gap: 10px; margin-top: 8px; }
+    .btn-danger { flex: 1; padding: 10px; background: #fff; color: #c84628; border: 1px solid #fecaca; border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+    .btn-ranking { width: 100%; padding: 12px; background: #fff; border: 1px solid #e0d5c1; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; }
+
+    .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 400; display: flex; align-items: center; justify-content: center; }
+    .confirm-box { background: #fff; border-radius: 20px; padding: 24px; width: 90%; max-width: 320px; text-align: center; }
+    .confirm-box p { margin-bottom: 16px; font-size: 14px; color: #1a1a1a; }
+    .confirm-box button { padding: 8px 24px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; margin: 0 6px; }
+    .btn-cancel { background: #e8e3d9; }
+    .btn-confirm { background: #c84628; color: #fff; }
+</style>
+
+<div class="custom-page">
+    <div class="custom-topbar">
+        <button class="custom-back" onclick="parent.loadSubPage('Home_Admin.html')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#8b7355" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span class="custom-title">自定义变量/JSON</span>
+    </div>
+
+    <!-- 自定义变量 -->
+    <div class="custom-card">
+        <div class="card-title">
+            <span class="card-title-text">
+                <span class="toggle-icon" id="VarToggle" onclick="parent.toggleSection('var')">▶</span>
+                📝 自定义变量
+            </span>
+        </div>
+       <div id="VarSection">
+    <div id="VarList"></div>
+    <div class="add-row">
+        <input id="NewVarName" placeholder="变量名">
+        <select id="NewVarType" style="padding:6px 10px;border:1px solid #e0d5c1;border-radius:8px;font-size:12px;outline:none;font-family:inherit;"><option value="value">value</option><option value="string">string</option></select>
+        <input id="NewVarDefault" placeholder="默认值" value="0">
+        <button class="btn-add" onclick="parent.addCustomVar()">添加</button>
+    </div>
+    <button class="btn-add" style="margin-top:8px;width:100%;" onclick="parent.saveCustomConfig()">💾 保存变量设置</button>
+</div>
+
+    </div>
+
+    <!-- 自定义JSON表 -->
+    <div class="custom-card">
+        <div class="card-title">
+            <span class="card-title-text">
+                <span class="toggle-icon" id="TableToggle" onclick="parent.toggleSection('table')">▶</span>
+                📋 自定义JSON
+            </span>
+        </div>
+     <div id="TableSection">
+    <div id="TableList"></div>
+    <div class="add-row">
+        <input id="NewTblName" placeholder="表名">
+        <input id="NewTblCols" placeholder="例如: teststr:string,count:value">
+        <button class="btn-add" onclick="parent.addCustomTable()">添加</button>
+    </div>
+    <button class="btn-add" style="margin-top:8px;width:100%;" onclick="parent.saveCustomConfig()">💾 保存JSON设置</button>
+</div>
+    </div>
+
+    <!-- 排行榜入口 -->
+    <button class="btn-ranking" onclick="parent.loadSubPage('Home_Admin_Custom_Ranking.html')">📊 自定义变量/JSON排行榜</button>
+
+    <!-- 危险区域 -->
+    <div class="danger-zone">
+        <button class="btn-danger" onclick="parent.showConfirm('确定清空所有自定义变量吗？此操作不可恢复！', ()=>parent.clearAllVars())">清空所有自定义变量</button>
+        <button class="btn-danger" onclick="parent.showConfirm('确定清空所有自定义JSON吗？此操作不可恢复！', ()=>parent.clearAllTables())">清空所有自定义JSON</button>
+    </div>
+</div>

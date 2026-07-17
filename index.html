@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LQ Cloud Console</title>
+    <style>
+        :root {
+            --bg: #f0f2f5;
+            --card-bg: #ffffff;
+            --text: #1a1a1a;
+            --text-secondary: #666;
+            --accent: #4f6ef7;
+            --accent-light: #eef1ff;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.12);
+            --radius: 18px;
+            --nav-height: 70px;
+            --banner-height: 180px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding-bottom: calc(var(--nav-height) + 30px);
+            -webkit-font-smoothing: antialiased;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .banner {
+            position: relative;
+            width: 100%;
+            height: var(--banner-height);
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            user-select: none;
+        }
+
+        .banner::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at 20% 50%, rgba(79, 110, 247, 0.25) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(120, 150, 255, 0.15) 0%, transparent 50%);
+        }
+
+        .banner-logo-wrap {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .banner-logo {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            object-fit: contain;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 6px;
+        }
+
+        .banner-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 0.5px;
+        }
+
+        .banner-dots {
+            position: absolute;
+            bottom: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2;
+            display: flex;
+            gap: 8px;
+        }
+
+        .banner-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.35);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            outline: none;
+        }
+
+        .banner-dot.active {
+            background: #fff;
+            width: 24px;
+            border-radius: 4px;
+        }
+
+        .page-container {
+            max-width: 520px;
+            margin: 0 auto;
+            padding: 20px 16px;
+            min-height: 300px;
+            position: relative;
+        }
+
+        .page-container.loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading-spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid #e0e0e0;
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            background: var(--card-bg);
+            border-radius: 22px;
+            padding: 6px 8px;
+            display: flex;
+            gap: 4px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04);
+        }
+
+        .nav-item {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            padding: 8px 18px;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            user-select: none;
+            background: transparent;
+            z-index: 1;
+            -webkit-tap-highlight-color: transparent;
+            outline: none;
+        }
+
+        .nav-item.active {
+            background: var(--accent-light);
+            transform: rotate(0.6deg);
+            box-shadow: 0 2px 12px rgba(79, 110, 247, 0.2);
+        }
+
+        .nav-item:active {
+            transform: scale(0.94);
+        }
+
+        .nav-icon {
+            width: 26px;
+            height: 26px;
+            object-fit: contain;
+            transition: transform 0.25s ease;
+        }
+
+        .nav-item.active .nav-icon {
+            transform: scale(1.08);
+        }
+
+        .nav-label {
+            font-size: 10px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: color 0.25s ease;
+        }
+
+        .nav-item.active .nav-label {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .cache-dot {
+            position: absolute;
+            top: 4px;
+            right: 10px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #4caf50;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .nav-item.cached .cache-dot {
+            opacity: 1;
+        }
+
+        ::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="banner" id="banner">
+        <div class="banner-logo-wrap">
+            <img src="icon.png" alt="Logo" class="banner-logo" onerror="this.style.display='none'">
+            <span class="banner-title">LQ Cloud Console</span>
+        </div>
+        <div class="banner-dots" id="bannerDots">
+            <span class="banner-dot active" data-index="0"></span>
+            <span class="banner-dot" data-index="1"></span>
+            <span class="banner-dot" data-index="2"></span>
+            <span class="banner-dot" data-index="3"></span>
+        </div>
+    </div>
+
+    <div class="page-container" id="pageContainer">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <nav class="bottom-nav" id="bottomNav">
+        <div class="nav-item active cached" data-page="home" onclick="switchTab('home', this)">
+            <img src="Home.png" alt="Home" class="nav-icon" onerror="this.style.display='none'">
+            <span class="nav-label">Home</span>
+            <span class="cache-dot"></span>
+        </div>
+        <div class="nav-item" data-page="forum" onclick="switchTab('forum', this)">
+            <img src="Forum.png" alt="Forum" class="nav-icon" onerror="this.style.display='none'">
+            <span class="nav-label">Forum</span>
+            <span class="cache-dot"></span>
+        </div>
+        <div class="nav-item" data-page="send" onclick="switchTab('send', this)">
+            <img src="Send.png" alt="Send" class="nav-icon" onerror="this.style.display='none'">
+            <span class="nav-label">Send</span>
+            <span class="cache-dot"></span>
+        </div>
+        <div class="nav-item" data-page="my" onclick="switchTab('my', this)">
+            <img src="My.png" alt="My" class="nav-icon" onerror="this.style.display='none'">
+            <span class="nav-label">My</span>
+            <span class="cache-dot"></span>
+        </div>
+    </nav>
+
+<script src="js/debug.js"></script>
+<script src="js/core.js"></script>
+<script src="js/user.js"></script>
+<script src="js/config.js"></script>
+<script src="js/chat.js?v=20260717a"></script>
+<script src="js/chat_group.js"></script>
+<script src="js/admin_db.js"></script>
+<script src="js/admin_notice.js"></script>
+<script src="js/admin_users.js"></script>
+<script src="js/admin_custom.js"></script>
+<script src="js/admin_cardkey.js?v=20260717a"></script>
+<script src="js/ranking.js"></script>
+<script src="js/init.js"></script>
+</body>
+</html>

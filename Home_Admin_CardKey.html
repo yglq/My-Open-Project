@@ -1,0 +1,462 @@
+<!-- Home_Admin_CardKey.html -->
+<style>
+    .ck-page { display: flex; flex-direction: column; gap: 12px; }
+
+    .ck-topbar {
+        display: flex; align-items: center; gap: 12px;
+        background: #fff; border-radius: 18px; padding: 10px 14px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    }
+    .ck-back {
+        width: 34px; height: 34px; border-radius: 10px;
+        background: #faf7f2; border: none; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .ck-back:active { background: #e8e3d9; }
+    .ck-back svg { width: 18px; height: 18px; color: #8b7355; }
+    .ck-title { flex: 1; font-size: 18px; font-weight: 700; }
+    .ck-add-btn {
+        width: 34px; height: 34px; border-radius: 10px;
+        background: #faf7f2; border: none; font-size: 22px;
+        color: #8b7355; cursor: pointer; line-height: 1;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .ck-add-btn:active { background: #e8e3d9; }
+
+    .ck-tabs {
+        display: flex; gap: 6px; background: #fff; border-radius: 14px;
+        padding: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+        overflow-x: auto; -webkit-overflow-scrolling: touch;
+    }
+    .ck-tabs::-webkit-scrollbar { display: none; }
+    .ck-tab {
+        flex-shrink: 0; padding: 7px 16px; border-radius: 10px;
+        font-size: 13px; font-weight: 500; border: none;
+        background: transparent; color: #8b7355; cursor: pointer;
+        transition: all 0.2s; white-space: nowrap;
+    }
+    .ck-tab.active { background: #c84628; color: #fff; }
+
+    .ck-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .ck-card {
+        background: #fff; border-radius: 16px; padding: 14px 16px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+        display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+    }
+    .ck-card-left { flex: 1; min-width: 0; }
+    .ck-card-code {
+        font-size: 15px; font-weight: 700; color: #1a1a1a;
+        letter-spacing: 0.3px; margin-bottom: 6px; word-break: break-all;
+    }
+    .ck-card-rewards { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+    .ck-reward {
+        display: inline-flex; align-items: center; gap: 3px;
+        padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 500;
+    }
+    .ck-reward.gold { background: #fff9e6; color: #b8860b; }
+    .ck-reward.exp  { background: #f0f4ff; color: #4f6ef7; }
+    .ck-reward.vip  { background: #fef0f0; color: #c84628; }
+    .ck-reward.var  { background: #f3e8ff; color: #7c3aed; }
+    .ck-reward.json { background: #ecfdf5; color: #059669; }
+    .ck-card-time { font-size: 11px; color: #aaa; }
+    .ck-card-right { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+    .ck-status { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 8px; }
+    .ck-status.unused { background: #e8f5e9; color: #2e7d32; }
+    .ck-status.used   { background: #f5f5f5; color: #999; }
+    .ck-user { font-size: 11px; color: #888; text-align: right; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ck-del-btn {
+        font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 8px;
+        background: #fef0f0; color: #c84628; border: 1px solid #f3c9c9; cursor: pointer;
+    }
+    .ck-del-btn:active { background: #f8dada; }
+    .ck-empty { text-align: center; padding: 60px 20px; color: #bbb; font-size: 14px; }
+    .ck-loading { text-align: center; padding: 20px; color: #aaa; font-size: 13px; }
+
+    /* 弹窗 */
+    .ck-overlay {
+        position: fixed; inset: 0; background: rgba(0,0,0,0.35);
+        z-index: 200; display: none; align-items: flex-end; justify-content: center;
+    }
+    .ck-overlay.show { display: flex; }
+    .ck-sheet {
+        background: #fff; width: 100%; max-width: 520px;
+        border-radius: 20px 20px 0 0; padding: 20px 16px 30px;
+        max-height: 85vh; overflow-y: auto;
+        animation: ckSlideUp 0.25s ease;
+    }
+    @keyframes ckSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .ck-sheet-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+
+    .ck-row {
+        display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+    }
+    .ck-row label { font-size: 13px; color: #666; width: 50px; flex-shrink: 0; }
+    .ck-row input, .ck-row select {
+        flex: 1; padding: 9px 12px; border: 1.5px solid #e0d5c1;
+        border-radius: 10px; font-size: 14px; outline: none;
+        background: #faf7f2; color: #1a1a1a;
+    }
+    .ck-row input:focus, .ck-row select:focus { border-color: #8b7355; }
+
+    .ck-sheet-types {
+        display: flex; gap: 6px; flex: 1;
+    }
+    .ck-sheet-type {
+        flex: 1; padding: 9px 0; border: 1.5px solid #e0d5c1;
+        border-radius: 10px; font-size: 13px; cursor: pointer;
+        background: #faf7f2; text-align: center; color: #8b7355;
+    }
+    .ck-sheet-type.active { background: #c84628; color: #fff; border-color: #c84628; }
+
+    /* 自定义奖励项 */
+    .ck-reward-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+    .ck-reward-item {
+        display: flex; align-items: center; gap: 6px;
+        padding: 8px; background: #faf7f2; border-radius: 10px;
+    }
+    .ck-reward-item select { flex: 1; padding: 8px 10px; border: 1px solid #e0d5c1; border-radius: 8px; font-size: 13px; background: #fff; color: #1a1a1a; outline: none; }
+    .ck-reward-item input { width: 80px; padding: 8px 10px; border: 1px solid #e0d5c1; border-radius: 8px; font-size: 13px; background: #fff; outline: none; }
+    .ck-reward-del {
+        width: 28px; height: 28px; border-radius: 8px;
+        background: #fef0f0; color: #c84628; border: none;
+        font-size: 16px; cursor: pointer; flex-shrink: 0;
+    }
+
+    .ck-sheet-submit {
+        width: 100%; padding: 12px; background: #c84628; color: #fff;
+        border: none; border-radius: 12px; font-size: 15px; font-weight: 600;
+        cursor: pointer; margin-top: 8px;
+    }
+    .ck-sheet-submit:active { background: #a03720; }
+
+    /* 生成结果 */
+    .ck-result {
+        background: #faf7f2; border-radius: 12px; padding: 16px;
+        margin-top: 12px; max-height: 200px; overflow-y: auto;
+    }
+    .ck-result-item {
+        font-size: 13px; font-family: monospace; padding: 4px 0;
+        color: #1a1a1a; border-bottom: 1px solid #e8e3d9;
+    }
+</style>
+
+<div class="ck-page">
+    <!-- 顶部栏 -->
+    <div class="ck-topbar">
+        <button class="ck-back" onclick="parent.loadSubPage('Home_Admin.html')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span class="ck-title">卡密系统</span>
+        <button class="ck-add-btn" onclick="openGenerate()">+</button>
+    </div>
+
+    <!-- 类型切换 -->
+    <div class="ck-tabs" id="typeTabs">
+        <span class="ck-tab active" data-type="all">全部</span>
+        <span class="ck-tab" data-type="gold">金币卡密</span>
+        <span class="ck-tab" data-type="vip">会员卡密</span>
+        <span class="ck-tab" data-type="custom">自定义卡密</span>
+    </div>
+
+    <!-- 卡片列表 -->
+    <div class="ck-list" id="cardList">
+        <div class="ck-empty" id="ckEmpty">暂无卡密，点击右上角 + 生成</div>
+        <div class="ck-loading" id="ckLoading" style="display:none">加载中...</div>
+    </div>
+</div>
+
+<!-- 生成弹窗 -->
+<div class="ck-overlay" id="generateOverlay">
+    <div class="ck-sheet" id="genSheet"></div>
+</div>
+
+<script>
+// ========== 模拟自定义配置 ==========
+var CustomVars = ['score', 'power', 'level'];
+var CustomTables = { 'backpack': ['item_id', 'count'], 'skills': ['skill_name', 'skill_lv'] };
+
+// ========== 临时测试数据 ==========
+var AllCards = [
+    // 金币卡密
+    { id:1, type:'gold', code:'GOLD-001-ABC', gold:500, exp:100, used:false, usedBy:'', time:'2026-07-15 10:30' },
+    { id:2, type:'gold', code:'GOLD-002-DEF', gold:1000, exp:200, used:true, usedBy:'testuser1', time:'2026-07-14 09:15' },
+    { id:3, type:'gold', code:'GOLD-003-GHI', gold:300, exp:50, used:false, usedBy:'', time:'2026-07-13 14:20' },
+    { id:4, type:'gold', code:'GOLD-004-JKL', gold:2000, exp:500, used:true, usedBy:'player2', time:'2026-07-12 08:00' },
+    { id:5, type:'gold', code:'GOLD-005-MNO', gold:800, exp:150, used:false, usedBy:'', time:'2026-07-11 16:45' },
+    // 会员卡密
+    { id:6, type:'vip', code:'VIP-001-PQR', vip_days:3, used:false, usedBy:'', time:'2026-07-15 11:00' },
+    { id:7, type:'vip', code:'VIP-002-STU', vip_days:7, used:true, usedBy:'vipuser', time:'2026-07-14 12:30' },
+    { id:8, type:'vip', code:'VIP-003-VWX', vip_days:30, used:false, usedBy:'', time:'2026-07-13 18:00' },
+    // 自定义卡密
+    { id:9, type:'custom', code:'CUS-001-YZA', customType:'var', rewards:[{name:'score', value:'50'},{name:'power', value:'10'}], used:false, usedBy:'', time:'2026-07-15 13:00' },
+    { id:10, type:'custom', code:'CUS-002-BCD', customType:'json', rewards:[{table:'backpack', col:'item_id', value:'sword_01'},{table:'backpack', col:'count', value:'1'}], used:true, usedBy:'rpgfan', time:'2026-07-14 20:00' },
+    { id:11, type:'custom', code:'CUS-003-EFG', customType:'var', rewards:[{name:'level', value:'5'}], used:false, usedBy:'', time:'2026-07-13 22:00' },
+];
+
+var ckPage = 1, ckPageSize = 20, ckLoading = false, ckActiveType = 'all';
+var customRewardId = 0;
+
+// ========== 渲染 ==========
+function renderCards() {
+    var filtered = AllCards;
+    if (ckActiveType !== 'all') filtered = AllCards.filter(function(c){ return c.type === ckActiveType; });
+    // 安全过滤：自定义卡密中不存在的变量/JSON 删除对应 item
+    filtered = filtered.filter(function(c){
+        if (c.type === 'custom') {
+            if (c.customType === 'var') {
+                c.rewards = (c.rewards || []).filter(function(r){ return CustomVars.indexOf(r.name) !== -1; });
+            } else if (c.customType === 'json') {
+                c.rewards = (c.rewards || []).filter(function(r){ return CustomTables[r.table] !== undefined && CustomTables[r.table].indexOf(r.col) !== -1; });
+            }
+            return c.rewards.length > 0;
+        }
+        return true;
+    });
+
+    var list = document.getElementById('cardList');
+    if (filtered.length === 0) {
+        list.innerHTML = '<div class="ck-empty">暂无卡密，点击右上角 + 生成</div>';
+        return;
+    }
+
+    var html = filtered.map(function(c){
+        var rewardsHtml = '';
+        var statusClass = c.used ? 'used' : 'unused';
+        var statusText = c.used ? '已使用' : '未使用';
+        var userHtml = c.usedBy ? '<div class="ck-user">'+c.usedBy+'</div>' : '';
+
+        if (c.type === 'gold') {
+            rewardsHtml = '<div class="ck-card-rewards">';
+            if (c.gold) rewardsHtml += '<span class="ck-reward gold">'+c.gold+' 金币</span>';
+            if (c.exp) rewardsHtml += '<span class="ck-reward exp">'+c.exp+' 经验</span>';
+            rewardsHtml += '</div>';
+        } else if (c.type === 'vip') {
+            rewardsHtml = '<div class="ck-card-rewards"><span class="ck-reward vip">'+c.vip_days+' 天VIP</span></div>';
+        } else if (c.type === 'custom') {
+            rewardsHtml = '<div class="ck-card-rewards">';
+            (c.rewards || []).forEach(function(r){
+                var cls = c.customType === 'var' ? 'var' : 'json';
+                var label = c.customType === 'var' ? (r.name+'='+r.value) : (r.table+'.'+r.col+'='+r.value);
+                rewardsHtml += '<span class="ck-reward '+cls+'">'+label+'</span>';
+            });
+            rewardsHtml += '</div>';
+        }
+
+        return '<div class="ck-card">'+
+            '<div class="ck-card-left">'+
+                '<div class="ck-card-code">'+c.code+'</div>'+
+                rewardsHtml+
+                '<div class="ck-card-time">'+c.time+'</div>'+
+            '</div>'+
+            '<div class="ck-card-right">'+
+                '<span class="ck-status '+statusClass+'">'+statusText+'</span>'+
+                userHtml+
+            '</div>'+
+        '</div>';
+    }).join('');
+
+    list.innerHTML = html;
+}
+
+// ========== 类型切换 ==========
+document.getElementById('typeTabs').addEventListener('click', function(e){
+    if (e.target.classList.contains('ck-tab')) {
+        document.querySelectorAll('.ck-tab').forEach(function(t){ t.classList.remove('active'); });
+        e.target.classList.add('active');
+        ckActiveType = e.target.dataset.type;
+        renderCards();
+    }
+});
+
+// ========== 弹窗 ==========
+function openGenerate() {
+    var overlay = document.getElementById('generateOverlay');
+    overlay.classList.add('show');
+    renderGenSheet();
+}
+document.getElementById('generateOverlay').addEventListener('click', function(e){
+    if (e.target === this) this.classList.remove('show');
+});
+
+function renderGenSheet() {
+    var type = ckActiveType === 'all' ? 'gold' : ckActiveType;
+    var html = '<div class="ck-sheet-title">生成卡密</div>';
+
+    if (type === 'gold') {
+        html += renderGoldSheet();
+    } else if (type === 'vip') {
+        html += renderVipSheet();
+    } else if (type === 'custom') {
+        html += renderCustomSheet();
+    }
+    document.getElementById('genSheet').innerHTML = html;
+
+    if (type === 'custom') {
+        document.getElementById('genCustomType').addEventListener('click', function(e){
+            if (e.target.classList.contains('ck-sheet-type')) {
+                document.querySelectorAll('#genCustomType .ck-sheet-type').forEach(function(b){ b.classList.remove('active'); });
+                e.target.classList.add('active');
+                refreshCustomRewards();
+            }
+        });
+        refreshCustomRewards();
+    }
+}
+
+function renderGoldSheet() {
+    return '<div class="ck-row"><label>数量</label><input type="number" id="genCount" value="10" min="1" max="100"></div>'+
+           '<div class="ck-row"><label>金币</label><input type="number" id="genGold" value="500" min="0"></div>'+
+           '<div class="ck-row"><label>经验</label><input type="number" id="genExp" value="100" min="0"></div>'+
+           '<button class="ck-sheet-submit" onclick="doGenerateGold()">生成卡密</button>';
+}
+
+function renderVipSheet() {
+    return '<div class="ck-row"><label>数量</label><input type="number" id="genCount" value="10" min="1" max="100"></div>'+
+           '<div class="ck-row"><label>VIP(天)</label><input type="number" id="genVipDays" value="3" min="1"></div>'+
+           '<button class="ck-sheet-submit" onclick="doGenerateVip()">生成卡密</button>';
+}
+
+function renderCustomSheet() {
+    customRewardId = 0;
+    return '<div class="ck-row"><label>数量</label><input type="number" id="genCount" value="5" min="1" max="100"></div>'+
+           '<div class="ck-row"><label>类型</label>'+
+                '<div class="ck-sheet-types" id="genCustomType">'+
+                    '<span class="ck-sheet-type active" data-type="var">变量</span>'+
+                    '<span class="ck-sheet-type" data-type="json">JSON</span>'+
+                '</div>'+
+                '<button class="ck-add-btn" style="width:34px;height:34px;flex-shrink:0;" onclick="addCustomReward()">+</button>'+
+           '</div>'+
+           '<div class="ck-reward-list" id="customRewardList"></div>'+
+           '<button class="ck-sheet-submit" onclick="doGenerateCustom()">生成卡密</button>';
+}
+
+// ========== 自定义奖励项 ==========
+function addCustomReward() {
+    var cType = getCustomGenType();
+    customRewardId++;
+    var rid = customRewardId;
+    var list = document.getElementById('customRewardList');
+    var div = document.createElement('div');
+    div.className = 'ck-reward-item';
+    div.id = 'reward_'+rid;
+
+    if (cType === 'var') {
+        var opts = CustomVars.map(function(v){ return '<option value="'+v+'">'+v+'</option>'; }).join('');
+        div.innerHTML = '<select>'+opts+'</select>'+
+                        '<input type="text" placeholder="值" value="0">'+
+                        '<button class="ck-reward-del" onclick="delReward('+rid+')">x</button>';
+    } else {
+        var tblOpts = Object.keys(CustomTables).map(function(t){ return '<option value="'+t+'">'+t+'</option>'; }).join('');
+        var firstTable = Object.keys(CustomTables)[0] || '';
+        var colOpts = (CustomTables[firstTable] || []).map(function(c){ return '<option value="'+c+'">'+c+'</option>'; }).join('');
+        div.innerHTML = '<select class="json-tbl" onchange="onTblChange(this)">'+tblOpts+'</select>'+
+                        '<select class="json-col">'+colOpts+'</select>'+
+                        '<input type="text" placeholder="值" value="0">'+
+                        '<button class="ck-reward-del" onclick="delReward('+rid+')">x</button>';
+    }
+    list.appendChild(div);
+}
+
+function delReward(id) {
+    var el = document.getElementById('reward_'+id);
+    if (el) el.remove();
+}
+
+function getCustomGenType() {
+    var actives = document.querySelectorAll('#genCustomType .ck-sheet-type.active');
+    return actives.length > 0 ? actives[0].dataset.type : 'var';
+}
+
+function refreshCustomRewards() {
+    var list = document.getElementById('customRewardList');
+    if (!list) return;
+    var cType = getCustomGenType();
+    list.innerHTML = '';
+    customRewardId = 0;
+    // 加2个默认项
+    for (var i = 0; i < 2; i++) addCustomReward();
+}
+
+function onTblChange(sel) {
+    var row = sel.parentElement;
+    var colSel = row.querySelector('.json-col');
+    var tbl = sel.value;
+    var cols = CustomTables[tbl] || [];
+    colSel.innerHTML = cols.map(function(c){ return '<option value="'+c+'">'+c+'</option>'; }).join('');
+}
+
+// ========== 生成操作 ==========
+function randomCode(prefix) {
+    var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    var s = '';
+    for (var i = 0; i < 8; i++) s += chars[Math.floor(Math.random() * chars.length)];
+    return prefix + '-' + s;
+}
+
+function nowStr() {
+    var d = new Date();
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+
+           String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+
+function doGenerateGold() {
+    var count = parseInt(document.getElementById('genCount').value) || 10;
+    var gold = parseInt(document.getElementById('genGold').value) || 0;
+    var exp = parseInt(document.getElementById('genExp').value) || 0;
+    for (var i = 0; i < count; i++) {
+        AllCards.unshift({ id: Date.now()+i, type:'gold', code:randomCode('GOLD'), gold:gold, exp:exp, used:false, usedBy:'', time:nowStr() });
+    }
+    document.getElementById('generateOverlay').classList.remove('show');
+    renderCards();
+}
+
+function doGenerateVip() {
+    var count = parseInt(document.getElementById('genCount').value) || 10;
+    var vipDays = parseInt(document.getElementById('genVipDays').value) || 3;
+    for (var i = 0; i < count; i++) {
+        AllCards.unshift({ id: Date.now()+i, type:'vip', code:randomCode('VIP'), vip_days:vipDays, used:false, usedBy:'', time:nowStr() });
+    }
+    document.getElementById('generateOverlay').classList.remove('show');
+    renderCards();
+}
+
+function doGenerateCustom() {
+    var count = parseInt(document.getElementById('genCount').value) || 5;
+    var cType = getCustomGenType();
+    var items = document.querySelectorAll('#customRewardList .ck-reward-item');
+    var rewards = [];
+    items.forEach(function(item){
+        var selects = item.querySelectorAll('select');
+        var input = item.querySelector('input');
+        if (cType === 'var') {
+            var name = selects[0].value;
+            var val = input.value;
+            if (name && val !== '') rewards.push({ name:name, value:val });
+        } else {
+            var tbl = selects[0].value;
+            var col = selects[1].value;
+            var val = input.value;
+            if (tbl && col && val !== '') rewards.push({ table:tbl, col:col, value:val });
+        }
+    });
+    if (rewards.length === 0) { alert('请添加至少一个奖励项'); return; }
+    // 安全过滤
+    if (cType === 'var') {
+        rewards = rewards.filter(function(r){ return CustomVars.indexOf(r.name) !== -1; });
+    } else {
+        rewards = rewards.filter(function(r){ return CustomTables[r.table] && CustomTables[r.table].indexOf(r.col) !== -1; });
+    }
+    if (rewards.length === 0) { alert('所有奖励项均无效（变量/JSON不存在）'); return; }
+
+    for (var i = 0; i < count; i++) {
+        AllCards.unshift({ id: Date.now()+i, type:'custom', code:randomCode('CUS'), customType:cType, rewards:JSON.parse(JSON.stringify(rewards)), used:false, usedBy:'', time:nowStr() });
+    }
+    document.getElementById('generateOverlay').classList.remove('show');
+    renderCards();
+}
+
+// ========== 初始化 ==========
+renderCards();
+</script>
+</final_file_content>
