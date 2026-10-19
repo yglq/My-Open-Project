@@ -61,6 +61,9 @@ try {
     $_stmt4 = $_pdo->prepare("UPDATE users SET chat_list = :clist WHERE user_id = :uid");
     $_stmt4->execute(['clist' => json_encode($_targetList, JSON_UNESCAPED_UNICODE), 'uid' => $TargetUserId]);
 
+    // 实时刷新在线成员界面（静默失败）
+    wsPublishToMembers(array_map('intval', array_merge(array_map('intval', array_keys($_json['Members'])), [intval($TargetUserId)])), ['type' => 'chat_refresh', 'chat_id' => $ChatId]);
+
     echo json_encode([
         'code'         => 0,
         'message'      => '已踢出',

@@ -51,6 +51,9 @@ try {
         $_stmt4->execute(['clist' => json_encode($_list, JSON_UNESCAPED_UNICODE), 'uid' => intval($_mid)]);
     }
 
+    // 实时刷新在线成员界面（静默失败）
+    wsPublishToMembers(array_map('intval', $_memberKeys), ['type' => 'chat_refresh', 'chat_id' => $ChatId]);
+
     echo json_encode(['code' => 0, 'message' => '聊天记录已清空'], JSON_UNESCAPED_UNICODE);
 
 } catch (Exception $e) {

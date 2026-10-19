@@ -55,6 +55,9 @@ try {
     $_stmt3 = $_pdo->prepare("UPDATE chat_data SET chat_json = :json WHERE chat_id = :cid");
     $_stmt3->execute(['json' => $_newJson, 'cid' => $ChatId]);
 
+    // 实时刷新在线成员界面（静默失败）
+    wsPublishToMembers(array_map('intval', array_keys($_members)), ['type' => 'chat_refresh', 'chat_id' => $ChatId]);
+
     echo json_encode(['code' => 0, 'message' => "已邀请 $_added 人"], JSON_UNESCAPED_UNICODE);
 
 } catch (Exception $e) {

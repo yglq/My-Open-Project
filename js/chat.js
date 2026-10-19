@@ -62,6 +62,29 @@ function openChat(chatId) {
 }
 
 
+// 轻量刷新当前聊天（WebSocket 收到新消息时调用，不重载子页面）
+async function refreshCurrentChat() {
+    if (!CurrentChatId) return;
+    if (!document.getElementById('ChatMessages')) return;
+
+    const _formData = new FormData();
+    _formData.append('UserId', localStorage.getItem('UserId'));
+    _formData.append('ChatId', CurrentChatId);
+    _formData.append('Offset', '0');
+    _formData.append('Limit', String(ChatLimit));
+
+    try {
+        const _res = await apiFetch('/chat/chat_detail.php', { method: 'POST', body: _formData });
+        const _data = await _res.json();
+        if (_data.code === 0) {
+            ChatData = _data.data;
+            renderMessages(_data.data.Messages, _data.data.ReadList || {}, _data.data.IsGroup);
+            const _c = document.getElementById('ChatMessages');
+            if (_c) _c.scrollTop = _c.scrollHeight;
+        }
+    } catch (_err) {}
+}
+
 // ========== Chat Detail ==========
 let CurrentChatId = '';
 let CurrentOffset = 0;

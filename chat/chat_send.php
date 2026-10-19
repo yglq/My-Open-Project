@@ -136,6 +136,13 @@ case 'InviteStudio':
         throw $e2;
     }
 
+    // 实时推送给在线成员（WebSocket 守护进程；不在线/未运行时静默跳过）
+    wsPublishToMembers(array_map('intval', array_keys($_members)), [
+        'type'    => 'new_msg',
+        'chat_id' => $ChatId,
+        'msg'     => $_newMsg,
+    ]);
+
     echo json_encode([
         'code'    => 0,
         'message' => '发送成功',

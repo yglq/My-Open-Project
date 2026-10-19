@@ -403,6 +403,26 @@ function generateUniqueTableName() {
     throw new Exception('表名生成失败，请重试');
 }
 
+// 把实时事件推送给在线成员（tools/ws_server.php）；失败静默，不影响主流程
+function wsPublishToMembers(array $memberIds, array $payload) {
+    $tokenFile = __DIR__ . '/../tools/ws_internal.token';
+    $token = is_file($tokenFile) ? trim(file_get_contents($tokenFile)) : '';
+    if ($token === '') return;
+    $body = json_encode([
+        'member_ids' => array_map('intval', $memberIds),
+        'payload'    => $payload,
+    ]);
+    $fp = @fsockopen('127.0.0.1', 2081, $errno, $errstr, 0.4);
+    if (!$fp) return;
+    $req = "POST /publish HTTP/1.0\r\nHost: 127.0.0.1\r\nX-Internal-Token: $token\r\n"
+        . "Content-Type: application/json\r\nContent-Length: " . strlen($body) . "\r\n"
+        . "Connection: close\r\n\r\n" . $body;
+    @fwrite($fp, $req);
+    stream_set_timeout($fp, 0, 300000);
+    @fgets($fp); // 读响应行，确保服务端已派发
+    @fclose($fp);
+}
+
 // 仅允许字母数字下划线作为 SQL 标识符（表名/列名），防止注入
 function _safeIdent($name) {
     return preg_replace('/[^A-Za-z0-9_]/', '', (string)$name);

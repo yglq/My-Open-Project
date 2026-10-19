@@ -51,7 +51,8 @@ try {
         if (count($_members) == 2 
             && array_key_exists(strval($UserId), $_members) 
             && array_key_exists(strval($TargetUserId), $_members)) {
-            // 已存在，直接返回
+            // 已存在，直接返回（推一下对方刷新列表，静默失败）
+            wsPublishToMembers([intval($UserId), intval($TargetUserId)], ['type' => 'chat_refresh', 'chat_id' => $_chat['chat_id']]);
             echo json_encode([
                 'code'     => 0,
                 'chat_id'  => $_chat['chat_id'],
@@ -94,6 +95,9 @@ try {
     $_stmtCL = $_pdo->prepare("UPDATE users SET chat_list = JSON_ARRAY_APPEND(COALESCE(chat_list, '[]'), '$', CAST(:item AS JSON)) WHERE user_id = :uid");
     $_stmtCL->execute(['item' => $_newItem, 'uid' => $UserId]);
     $_stmtCL->execute(['item' => $_newItem, 'uid' => $TargetUserId]);
+
+    // 实时刷新在线成员界面（静默失败）
+    wsPublishToMembers(array_map('intval', [$UserId, $TargetUserId]), ['type' => 'chat_refresh', 'chat_id' => $_newChatId]);
 
     echo json_encode([
         'code'    => 0,
