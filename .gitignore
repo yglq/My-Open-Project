@@ -12,3 +12,4 @@ openCode.sh
 .DS_Store
 Thumbs.db
 *.log
+tools/deploy.token
