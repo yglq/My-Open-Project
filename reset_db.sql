@@ -1,5 +1,5 @@
 -- ========== LQ Cloud Console 数据库重置脚本 ==========
--- 用法: mysql -u root -p'123456' -h 127.0.0.1 < reset_db.sql
+-- 用法: mysql -u root -p -h 127.0.0.1 < reset_db.sql   （回车后交互输入密码）
 
 USE game_data;
 
