@@ -73,6 +73,7 @@ function randomString($_length, $_type = 'all') {
 // ApiToken: 调用方传入的 token
 // 说明：当 api_token_switch=1 时验证，否则跳过
 function validateApiToken($ConfigId, $ApiToken) {
+    if (!preg_match('/^[A-Za-z0-9_]{1,64}$/', (string)$ConfigId)) throw new Exception('ConfigId 非法');
     $_pdo = GetPDO();
     $_stmt = $_pdo->prepare("SELECT api_token, api_token_switch FROM admin_config WHERE config_id = :cid LIMIT 1");
     $_stmt->execute(['cid' => $ConfigId]);
@@ -88,6 +89,7 @@ function validateApiToken($ConfigId, $ApiToken) {
 // ConfigId: 数据库标识
 // Tokey: 数据库密钥
 function validateTokey($UserId, $ConfigId, $Tokey) {
+    if (!preg_match('/^[A-Za-z0-9_]{1,64}$/', (string)$ConfigId)) throw new Exception('ConfigId 非法');
     $_pdo = GetPDO();
     $_stmt = $_pdo->prepare("SELECT table_data FROM data_tables_registry WHERE user_id = :uid");
     $_stmt->execute(['uid' => $UserId]);
@@ -98,6 +100,93 @@ function validateTokey($UserId, $ConfigId, $Tokey) {
         }
     }
     throw new Exception('Tokey 验证失败');
+}
+
+// 签发主用户会话令牌（登录时调用），返回明文 token 并写库
+function issueSessionToken($UserId) {
+    $_token = bin2hex(random_bytes(24)); // 48 字符
+    $_pdo = GetPDO();
+    $_stmt = $_pdo->prepare("UPDATE users SET session_token = :t WHERE user_id = :uid");
+    $_stmt->execute(['t' => $_token, 'uid' => $UserId]);
+    return $_token;
+}
+
+// 校验主用户会话令牌
+function validateSessionToken($UserId, $SessionToken) {
+    if ($SessionToken === '') return false;
+    $_pdo = GetPDO();
+    $_stmt = $_pdo->prepare("SELECT session_token FROM users WHERE user_id = :uid LIMIT 1");
+    $_stmt->execute(['uid' => $UserId]);
+    $_stored = $_stmt->fetchColumn();
+    return $_stored !== false && $_stored !== null && $_stored !== ''
+        && hash_equals($_stored, $SessionToken);
+}
+
+// 控制台接口统一鉴权：UserId + SessionToken（兼容回退 Password）
+// 从 $_POST 取参；校验通过返回 user_id，否则抛异常
+function authUser() {
+    $_userId = intval($_POST['UserId'] ?? 0);
+    if ($_userId <= 0) throw new Exception('参数错误：UserId 必填');
+
+    $_pdo = GetPDO();
+    $_stmt = $_pdo->prepare("SELECT password, session_token, status FROM users WHERE user_id = :uid LIMIT 1");
+    $_stmt->execute(['uid' => $_userId]);
+    $_user = $_stmt->fetch();
+    if (!$_user) throw new Exception('用户不存在');
+    if ((int)$_user['status'] === 1) throw new Exception('账号已被封禁');
+
+    // 优先会话令牌；无令牌时兼容旧密码校验
+    $_token = $_POST['SessionToken'] ?? '';
+    if ($_token !== '') {
+        if (hash_equals((string)$_user['session_token'], $_token)) return $_userId;
+        throw new Exception('登录状态已失效，请重新登录');
+    }
+    $_pwd = $_POST['Password'] ?? '';
+    if ($_pwd !== '' && verifyPwd($_pwd, $_user['password'])) return $_userId;
+
+    throw new Exception('未登录或凭证无效');
+}
+
+// 简单限流：同一 IP+端点 在窗口期内超过次数则拒绝
+// 用法：rateLimit('user/login', 5, 60) → 每分钟最多 5 次
+function rateLimit($endpoint, $maxCount = 10, $windowSec = 60) {
+    $_pdo = GetPDO();
+    // 表按需自建，无迁移成本
+    $_pdo->exec("CREATE TABLE IF NOT EXISTS rate_limit (
+        `endpoint` VARCHAR(64) NOT NULL,
+        `ip` VARCHAR(45) NOT NULL,
+        `window_start` INT UNSIGNED NOT NULL,
+        `count` INT UNSIGNED NOT NULL DEFAULT 0,
+        PRIMARY KEY (endpoint, ip)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    $_ip = getClientIp();
+    $_now = time();
+    $_win = $_now - ($_now % $windowSec);
+
+    $_pdo->beginTransaction();
+    try {
+        $_stmt = $_pdo->prepare("SELECT window_start, count FROM rate_limit WHERE endpoint = :ep AND ip = :ip FOR UPDATE");
+        $_stmt->execute(['ep' => $endpoint, 'ip' => $_ip]);
+        $_row = $_stmt->fetch();
+
+        if (!$_row || (int)$_row['window_start'] !== $_win) {
+            $_stmt2 = $_pdo->prepare("REPLACE INTO rate_limit (endpoint, ip, window_start, count) VALUES (:ep, :ip, :w, 1)");
+            $_stmt2->execute(['ep' => $endpoint, 'ip' => $_ip, 'w' => $_win]);
+            $_pdo->commit();
+            return;
+        }
+        if ((int)$_row['count'] >= $maxCount) {
+            $_pdo->commit();
+            throw new Exception('请求过于频繁，请稍后再试');
+        }
+        $_stmt3 = $_pdo->prepare("UPDATE rate_limit SET count = count + 1 WHERE endpoint = :ep AND ip = :ip");
+        $_stmt3->execute(['ep' => $endpoint, 'ip' => $_ip]);
+        $_pdo->commit();
+    } catch (Exception $e) {
+        if ($_pdo->inTransaction()) $_pdo->rollBack();
+        throw $e;
+    }
 }
 
 // ========== 公共工具函数 ==========
@@ -301,8 +390,11 @@ if (!isDevMode()) {
 
 // 验证 Tokey（全局版）：用于无需 UserId 的场景，如 notice_update API
 function validateTokeyGlobal($ConfigId, $Tokey) {
+    if (!preg_match('/^[A-Za-z0-9_]{1,64}$/', (string)$ConfigId)) throw new Exception('ConfigId 非法');
     $_pdo = GetPDO();
-    $_stmt = $_pdo->query("SELECT table_data FROM data_tables_registry");
+    // JSON_SEARCH 只取包含该 ConfigId 的行，不再全表解码
+    $_stmt = $_pdo->prepare("SELECT table_data FROM data_tables_registry WHERE JSON_SEARCH(table_data, 'one', :cid) IS NOT NULL");
+    $_stmt->execute(['cid' => $ConfigId]);
     $_all = $_stmt->fetchAll();
     foreach ($_all as $_row) {
         $_data = json_decode($_row['table_data'], true) ?: [];

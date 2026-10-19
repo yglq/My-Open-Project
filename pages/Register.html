@@ -387,6 +387,10 @@
                 const _result = await _response.json();
 
                 if (_result.code === 0) {
+                    // 注册即登录：存会话令牌
+                    localStorage.setItem('UserId', _result.userId);
+                    localStorage.setItem('UserName', UserName);
+                    if (_result.sessionToken) localStorage.setItem('SessionToken', _result.sessionToken);
                     showToast('注册成功！正在跳转...');
                     setTimeout(() => {
                         window.location.href = '/index.html';

@@ -7,7 +7,7 @@ async function loadGlobalDbSelector() {
 
     try {
         const _f = new FormData(); _f.append('UserId', UserId);
-        const _r = await fetch('/database/database_list.php', { method: 'POST', body: _f });
+        const _r = await apiFetch('/database/database_list.php', { method: 'POST', body: _f });
         const _d = await _r.json();
         if (_d.code === 0 && _d.data.length > 0) {
             Select.innerHTML = _d.data.map(item => {

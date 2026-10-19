@@ -10,7 +10,7 @@
         _formData.append('UserId', UserId);
 
         try {
-            const _res = await fetch('/admin/admin_databases.php', { method: 'POST', body: _formData });
+            const _res = await apiFetch('/admin/admin_databases.php', { method: 'POST', body: _formData });
             const _data = await _res.json();
 
             if (_data.code === 0 && _data.list.length > 0) {
@@ -48,7 +48,7 @@ async function loadConfig() {
         _formData.append('UserId', UserId);
         _formData.append('ConfigId', configId);
         _formData.append('Tokey', tokey);
-        const _res = await fetch('/admin/admin_config_get.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/admin/admin_config_get.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
 
         if (_data.code === 0) {
@@ -140,7 +140,7 @@ async function saveConfig() {
     _formData.append('sub_pwd_hash', getToggle('SubPwdHash'));
 
     try {
-        const _res = await fetch('/admin/admin_config_save.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/admin/admin_config_save.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
         if (_data.code === 0) {
             Toast.className = 'toast-inline success';

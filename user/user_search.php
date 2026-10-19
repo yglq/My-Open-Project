@@ -10,6 +10,7 @@ header('Content-Type: application/json; charset=utf-8');
 try {
 
     requirePost();
+    authUser();
 
     $UserId  = intval($_POST['UserId'] ?? 0);
     $Keyword = trim($_POST['Keyword'] ?? '');

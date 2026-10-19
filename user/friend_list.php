@@ -10,14 +10,16 @@ header('Content-Type: application/json; charset=utf-8');
 try {
 
     requirePost();
+    authUser();
 
     $UserId = intval($_POST['UserId'] ?? 0);
     if ($UserId <= 0) throw new Exception('参数错误');
 
     $_pdo = GetPDO();
 
-    // 查所有 chat_data，找 Members 恰好 2 人且包含当前用户的
-    $_stmt = $_pdo->query("SELECT chat_id, chat_json FROM chat_data");
+    // 只取包含当前用户的对话（JSON 成员索引过滤，不再全表扫描）
+    $_stmt = $_pdo->prepare("SELECT chat_id, chat_json FROM chat_data WHERE JSON_CONTAINS_PATH(chat_json, 'one', :path)");
+    $_stmt->execute(['path' => '$.Members."' . $UserId . '"']);
     $_allChats = $_stmt->fetchAll();
 
     $_friends = [];

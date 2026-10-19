@@ -18,7 +18,7 @@ async function loadUserList(page) {
     _f.append('PageSize', PageSize);
 
     try {
-        const _r = await fetch('/sub_user/sub_users_list.php', { method: 'POST', body: _f });
+        const _r = await apiFetch('/sub_user/sub_users_list.php', { method: 'POST', body: _f });
         const _d = await _r.json();
         if (_d.code === 0) {
             renderUserList(_d.data, _d.total, _d.totalPages);
@@ -116,7 +116,7 @@ async function createSubUser() {
     _f.append('Password', password);
 
     try {
-        const _r = await fetch('/sub_user/sub_user_create.php', { method: 'POST', body: _f });
+        const _r = await apiFetch('/sub_user/sub_user_create.php', { method: 'POST', body: _f });
         const _d = await _r.json();
         if (_d.code === 0) {
             document.getElementById('CreateUserOverlay').remove();
@@ -149,7 +149,7 @@ async function showUserDetail(userId) {
     _f.append('SubUserId', userId);
 
     try {
-        const _r = await fetch('/sub_user/sub_user_detail.php', { method: 'POST', body: _f });
+        const _r = await apiFetch('/sub_user/sub_user_detail.php', { method: 'POST', body: _f });
         const _d = await _r.json();
         if (_d.code === 0) {
             OriginalDetailData = JSON.parse(JSON.stringify(_d.data));
@@ -344,7 +344,7 @@ async function saveUserDetail() {
         }
     });
     try {
-        const _r = await fetch('/sub_user/sub_user_update.php', { method: 'POST', body: _f });
+        const _r = await apiFetch('/sub_user/sub_user_update.php', { method: 'POST', body: _f });
         const _d = await _r.json();
         if (_d.code === 0) {
             alert('保存成功');
@@ -368,7 +368,7 @@ async function uploadSubAvatar() {
     _f.append('SubUserId', CurrentSubUserId);
     _f.append('Avatar', file);
     try {
-        const _r = await fetch('/sub_user/sub_user_avatar.php', { method: 'POST', body: _f });
+        const _r = await apiFetch('/sub_user/sub_user_avatar.php', { method: 'POST', body: _f });
         const _d = await _r.json();
         if (_d.code === 0) {
             const img = document.getElementById('DetailAvatar');
@@ -387,7 +387,7 @@ async function deleteSubUser(userId) {
     _f.append('Tokey', Tokey);
     _f.append('SubUserId', userId);
     try {
-        const _r = await fetch('/sub_user/sub_user_delete.php', { method: 'POST', body: _f });
+        const _r = await apiFetch('/sub_user/sub_user_delete.php', { method: 'POST', body: _f });
         const _d = await _r.json();
         if (_d.code === 0) {
             document.getElementById('UserDetailOverlay').remove();

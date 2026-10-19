@@ -50,7 +50,7 @@ async function doSearchUser() {
     _formData.append('Keyword', _kw);
 
     try {
-        const _res = await fetch('/user/user_search.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/user/user_search.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
 
         if (_data.code === 0 && _data.data.length > 0) {
@@ -78,7 +78,7 @@ async function createAndOpenChat(targetUserId) {
     _formData.append('TargetUserId', targetUserId);
 
     try {
-        const _res = await fetch('/chat/chat_create.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/chat/chat_create.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
 
         if (_data.code === 0) {
@@ -108,7 +108,7 @@ async function showGroupCreatePopup() {
     try {
         const _formData = new FormData();
         _formData.append('UserId', UserId);
-        const _res = await fetch('/user/friend_list.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/user/friend_list.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
         if (_data.code === 0) Friends = _data.data;
     } catch (_err) {
@@ -185,7 +185,7 @@ async function createGroup() {
     _formData.append('Members', JSON.stringify(_selected));
 
     try {
-        const _res = await fetch('/group/group_create.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/group/group_create.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
         if (_data.code === 0) {
             document.getElementById('GroupCreateOverlay').remove();
@@ -208,7 +208,7 @@ async function openGroupDetail() {
     _formData.append('ChatId', CurrentChatId);
 
     try {
-        const _res = await fetch('/group/group_members.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/group/group_members.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
         if (_data.code === 0) {
             showGroupDetailPopup(_data);
@@ -347,7 +347,7 @@ async function inviteToGroup() {
     _formData.append('Members', JSON.stringify(_selected));
 
     try {
-        const _res = await fetch('/group/group_invite.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/group/group_invite.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
         if (_data.code === 0) {
             document.getElementById('GroupInviteOverlay').remove();
@@ -367,7 +367,7 @@ async function kickMember(targetUserId) {
     _formData.append('TargetUserId', targetUserId);
 
     try {
-        const _res = await fetch('/group/group_kick.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/group/group_kick.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
         if (_data.code === 0) {
             document.getElementById('MemberDetailOverlay').remove();
@@ -390,7 +390,7 @@ async function clearGroupChat() {
     _formData.append('ChatId', CurrentChatId);
 
     try {
-        const _res = await fetch('/group/group_clear.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/group/group_clear.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
         if (_data.code === 0) {
             alert('已清空');
@@ -410,7 +410,7 @@ async function leaveGroup() {
     _formData.append('ChatId', CurrentChatId);
 
     try {
-        const _res = await fetch('/group/group_leave.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/group/group_leave.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
         if (_data.code === 0) {
             document.getElementById('GroupDetailOverlay').remove();
@@ -437,7 +437,7 @@ async function loadDbList() {
     if (!el) return;
     try {
         const f = new FormData(); f.append('UserId', UserId);
-        const r = await fetch('/database/database_list.php', {method:'POST', body:f});
+        const r = await apiFetch('/database/database_list.php', {method:'POST', body:f});
         const d = await r.json();
         if (d.code===0 && d.data.length>0) {
             el.innerHTML = d.data.map(item => {
@@ -482,7 +482,7 @@ async function joinDb() {
     if(!id||!key) return alert('填写完整');
     const f = new FormData(); f.append('UserId',localStorage.getItem('UserId')); f.append('ConfigId',id); f.append('Tokey',key);
     try {
-        const r = await fetch('/database/database_join.php',{method:'POST',body:f}); const d = await r.json();
+        const r = await apiFetch('/database/database_join.php',{method:'POST',body:f}); const d = await r.json();
         if(d.code===0){ document.getElementById('JoinOverlay').remove(); loadDbList(); }
         else alert(d.message);
     } catch(e) { alert('网络错误'); }
@@ -516,7 +516,7 @@ async function createDb() {
     if(!name) return alert('输入名称');
     const f = new FormData(); f.append('UserId',localStorage.getItem('UserId')); f.append('DbName',name); f.append('Tokey',tokey);
     try {
-        const r = await fetch('/database/database_create.php',{method:'POST',body:f}); const d = await r.json();
+        const r = await apiFetch('/database/database_create.php',{method:'POST',body:f}); const d = await r.json();
         if(d.code===0){ document.getElementById('CreateOverlay').remove(); loadDbList(); }
         else alert(d.message);
     } catch(e) { alert('网络错误'); }
@@ -526,7 +526,7 @@ async function createDb() {
 async function removeDb(configId) {
     if(!confirm('确定退出该数据库吗？')) return;
     const f = new FormData(); f.append('UserId',localStorage.getItem('UserId')); f.append('ConfigId',configId);
-    const r = await fetch('/database/database_remove.php',{method:'POST',body:f}); const d = await r.json();
+    const r = await apiFetch('/database/database_remove.php',{method:'POST',body:f}); const d = await r.json();
     if(d.code===0) loadDbList(); else alert(d.message);
 }
 
@@ -547,7 +547,7 @@ async function updateTokey(configId) {
     const newKey = document.getElementById('NewTokey').value.trim();
     if(!newKey) return alert('输入新密钥');
     const f = new FormData(); f.append('UserId',localStorage.getItem('UserId')); f.append('ConfigId',configId); f.append('NewTokey',newKey);
-    const r = await fetch('/database/database_update_tokey.php',{method:'POST',body:f}); const d = await r.json();
+    const r = await apiFetch('/database/database_update_tokey.php',{method:'POST',body:f}); const d = await r.json();
     if(d.code===0){ document.getElementById('TokeyOverlay').remove(); loadDbList(); }
     else alert(d.message);
 }
@@ -558,7 +558,7 @@ function showMembersPopup(configId) {
     // 从当前列表数据里找到对应的 members
     // 需要先重新请求数据，或者从缓存的 _lastDbData 中取
     const f = new FormData(); f.append('UserId', UserId);
-    fetch('/database/database_list.php', {method:'POST', body:f}).then(r=>r.json()).then(d=>{
+    apiFetch('/database/database_list.php', {method:'POST', body:f}).then(r=>r.json()).then(d=>{
         if(d.code===0){
             const item = d.data.find(i=>i.table===configId);
             if(!item || !item.members) return;
@@ -582,7 +582,7 @@ function showMembersPopup(configId) {
 async function removeMember(configId, targetUserId) {
     if(!confirm('确定移除该成员吗？')) return;
     const f = new FormData(); f.append('UserId', localStorage.getItem('UserId')); f.append('ConfigId', configId); f.append('TargetUserId', targetUserId);
-    const r = await fetch('/database/database_remove_member.php', {method:'POST', body:f});
+    const r = await apiFetch('/database/database_remove_member.php', {method:'POST', body:f});
     const d = await r.json();
     if(d.code===0){ document.getElementById('MembersOverlay').remove(); loadDbList(); }
     else alert(d.message);

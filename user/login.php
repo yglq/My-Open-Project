@@ -15,6 +15,7 @@ try {
     requirePost();
 
     $_pdo = GetPDO();
+    rateLimit('user/login', 5, 60);
 
     $UserName = trim($_POST['UserName'] ?? '');
     $Password = $_POST['Password'] ?? '';
@@ -53,12 +54,16 @@ try {
         'uid' => $_user['user_id']
     ]);
 
+    // 签发会话令牌，前端存它而不是明文密码
+    $_sessionToken = issueSessionToken((int)$_user['user_id']);
+
     // 返回
     echo json_encode([
-        'code'     => 0,
-        'message'  => '登录成功',
-        'userId'   => (int)$_user['user_id'],
-        'userName' => $_user['username']
+        'code'         => 0,
+        'message'      => '登录成功',
+        'userId'       => (int)$_user['user_id'],
+        'userName'     => $_user['username'],
+        'sessionToken' => $_sessionToken
     ], JSON_UNESCAPED_UNICODE);
 
 } catch (Exception $e) {

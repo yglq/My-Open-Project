@@ -15,6 +15,7 @@ try {
     requirePost();
 
     $_pdo = GetPDO();
+    rateLimit('user/register', 3, 300);
 
     // ---------- 接收并校验参数 ----------
     $UserName = trim($_POST['UserName'] ?? '');
@@ -151,11 +152,13 @@ try {
         'sm'    => $_initMembers
     ]);
 
-    // ---------- 成功返回 ----------
+    // ---------- 成功返回（顺带签发登录态，注册即登录） ----------
+    $_sessionToken = issueSessionToken((int)$_newUserId);
     echo json_encode([
-        'code'    => 0,
-        'message' => '注册成功',
-        'userId'  => (int)$_newUserId
+        'code'         => 0,
+        'message'      => '注册成功',
+        'userId'       => (int)$_newUserId,
+        'sessionToken' => $_sessionToken
     ], JSON_UNESCAPED_UNICODE);
 
 } catch (Exception $e) {

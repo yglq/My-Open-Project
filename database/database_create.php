@@ -5,6 +5,7 @@ header('Content-Type: application/json; charset=utf-8');
 try {
 
     requirePost();
+    authUser();
     $UserId    = intval($_POST['UserId'] ?? 0);
     $DbName    = trim($_POST['DbName'] ?? '');
     $NewTokey  = trim($_POST['Tokey'] ?? ''); // 允许为空，则自动生成

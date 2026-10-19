@@ -17,6 +17,7 @@ try {
     }
 
     $_pdo = GetPDO();
+    rateLimit('API/user/register', 5, 300);
 
     $_stmt = $_pdo->prepare("SELECT * FROM admin_config WHERE config_id = :cid LIMIT 1");
     $_stmt->execute(['cid' => $ConfigId]);

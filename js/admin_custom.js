@@ -16,7 +16,7 @@ async function loadCustomConfig() {
     _f.append('UserId', localStorage.getItem('UserId'));
     _f.append('ConfigId', ConfigId);
     _f.append('Tokey', Tokey);
-    const _r = await fetch('/admin/admin_config_get.php', { method: 'POST', body: _f });
+    const _r = await apiFetch('/admin/admin_config_get.php', { method: 'POST', body: _f });
     const _d = await _r.json();
     if (_d.code === 0) {
         // 兼容旧格式（纯字符串数组）
@@ -154,7 +154,7 @@ async function saveCustomConfig() {
     _f.append('custom_tables', JSON.stringify(CustomTablesData));
     _f.append('custom_vars_defaults', JSON.stringify(CustomVarsDefaults));
     _f.append('custom_table_defaults', JSON.stringify(CustomTableDefaults));
-    var _r = await fetch('/admin/admin_config_save.php', { method: 'POST', body: _f });
+    var _r = await apiFetch('/admin/admin_config_save.php', { method: 'POST', body: _f });
     var _d = await _r.json();
     alert(_d.message || '保存成功');
 }

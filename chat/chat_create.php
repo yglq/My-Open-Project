@@ -10,6 +10,7 @@ header('Content-Type: application/json; charset=utf-8');
 try {
 
     requirePost();
+    authUser();
 
     $UserId       = intval($_POST['UserId'] ?? 0);
     $TargetUserId = intval($_POST['TargetUserId'] ?? 0);
@@ -34,8 +35,14 @@ try {
     $_myName = $_me['nickname'] ?: $_me['username'];
     $_targetName = $_target['nickname'] ?: $_target['username'];
 
-    // 检查是否已有私聊
-    $_stmt3 = $_pdo->query("SELECT chat_id, chat_json FROM chat_data");
+    // 检查是否已有私聊（JSON 成员索引过滤，不再全表扫描）
+    $_stmt3 = $_pdo->prepare("SELECT chat_id, chat_json FROM chat_data
+        WHERE JSON_CONTAINS_PATH(chat_json, 'one', :path1)
+          AND JSON_CONTAINS_PATH(chat_json, 'one', :path2)");
+    $_stmt3->execute([
+        'path1' => '$.Members."' . $UserId . '"',
+        'path2' => '$.Members."' . $TargetUserId . '"'
+    ]);
     $_allChats = $_stmt3->fetchAll();
     foreach ($_allChats as $_chat) {
         $_json = json_decode($_chat['chat_json'] ?? '[]', true);
@@ -82,10 +89,11 @@ try {
     $_stmt5 = $_pdo->prepare("INSERT INTO chat_data (chat_id, chat_json) VALUES (:cid, :json)");
     $_stmt5->execute(['cid' => $_newChatId, 'json' => $_chatJson]);
 
-    // 更新两人的 chat_list
+    // 更新两人的 chat_list（参数化，不再拼 SQL）
     $_newItem = json_encode(['chat_id' => $_newChatId, 'last_msg_id' => 0]);
-    $_pdo->exec("UPDATE users SET chat_list = JSON_ARRAY_APPEND(COALESCE(chat_list, '[]'), '$', CAST('$_newItem' AS JSON)) WHERE user_id = $UserId");
-    $_pdo->exec("UPDATE users SET chat_list = JSON_ARRAY_APPEND(COALESCE(chat_list, '[]'), '$', CAST('$_newItem' AS JSON)) WHERE user_id = $TargetUserId");
+    $_stmtCL = $_pdo->prepare("UPDATE users SET chat_list = JSON_ARRAY_APPEND(COALESCE(chat_list, '[]'), '$', CAST(:item AS JSON)) WHERE user_id = :uid");
+    $_stmtCL->execute(['item' => $_newItem, 'uid' => $UserId]);
+    $_stmtCL->execute(['item' => $_newItem, 'uid' => $TargetUserId]);
 
     echo json_encode([
         'code'    => 0,

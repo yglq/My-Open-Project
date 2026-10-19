@@ -26,7 +26,7 @@
             const _formData = new FormData();
             _formData.append('UserId', UserId);
 
-            const _response = await fetch('/user/user_info.php', {
+            const _response = await apiFetch('/user/user_info.php', {
                 method: 'POST',
                 body: _formData
             });
@@ -135,7 +135,7 @@ setTimeout(() => {
         _formData.append('Nickname', NewNickname);
 
         try {
-            const _res = await fetch('/user/update_nickname.php', { method: 'POST', body: _formData });
+            const _res = await apiFetch('/user/update_nickname.php', { method: 'POST', body: _formData });
             const _data = await _res.json();
 
             if (_data.code === 0) {
@@ -190,13 +190,13 @@ setTimeout(() => {
         _formData.append('NewPassword', NewPassword);
 
         try {
-            const _res = await fetch('/user/update_password.php', { method: 'POST', body: _formData });
+            const _res = await apiFetch('/user/update_password.php', { method: 'POST', body: _formData });
             const _data = await _res.json();
 
             if (_data.code === 0) {
                 Toast.className = 'toast-inline success';
                 Toast.textContent = '密码修改成功';
-    localStorage.setItem('Password', NewPassword);  // 新增：同步密码
+    if (_data.sessionToken) localStorage.setItem('SessionToken', _data.sessionToken);  // 改密后令牌已轮换
                 document.getElementById('OldPassword').value = '';
                 document.getElementById('NewPassword').value = '';
             } else {

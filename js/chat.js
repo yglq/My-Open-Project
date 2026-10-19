@@ -34,7 +34,7 @@ async function loadMsgList() {
     try {
         const _formData = new FormData();
         _formData.append('UserId', UserId);
-        const _res = await fetch('/chat/chat_list.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/chat/chat_list.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
 
         if (_data.code === 0 && _data.data.length > 0) {
@@ -80,7 +80,7 @@ async function openChatDetail(chatId) {
     _formData.append('Limit', String(ChatLimit));
 
     try {
-        const _res = await fetch('/chat/chat_detail.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/chat/chat_detail.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
 
         if (_data.code === 0) {
@@ -99,7 +99,7 @@ let ServerConfig = null;
 async function loadServerConfig() {
     if (ServerConfig) return ServerConfig;
     try {
-        const _res = await fetch('/admin/server_config_get.php');
+        const _res = await apiFetch('/admin/server_config_get.php');
         const _data = await _res.json();
         if (_data.code === 0) ServerConfig = _data.data;
         return ServerConfig;
@@ -306,7 +306,7 @@ async function parentSendMsg(type, extraData) {
     }
 
     try {
-        const _res = await fetch('/chat/chat_send.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/chat/chat_send.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
         if (_data.code === 0) {
             CurrentOffset = 0;
@@ -351,7 +351,7 @@ async function handleImageSend(event) {
     _formData.append('Image', _file);
 
     try {
-        const _res = await fetch('/chat/chat_send.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/chat/chat_send.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
         if (_data.code === 0) {
             CurrentOffset = 0;
@@ -388,7 +388,7 @@ async function inviteStudioMenu() {
     _formData.append('UserId', UserId);
 
     try {
-        const _res = await fetch('/database/user_databases.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/database/user_databases.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
 
         if (_data.code === 0 && _data.data.length > 0) {
@@ -450,7 +450,7 @@ async function acceptCoin(msgId, type, num) {
     _formData.append('MsgId', msgId);
 
     try {
-        const _res = await fetch('/admin/coin_accept.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/admin/coin_accept.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
         if (_data.code === 0) {
             alert(`成功获得 ${_data.num} 金币！`);
@@ -476,7 +476,7 @@ async function acceptStudio(configId, msgId, chatId) {
     _formData.append('MsgId', msgId);
 
     try {
-        const _res = await fetch('/database/studio_join.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/database/studio_join.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
         if (_data.code === 0) {
             alert('加入成功！');

@@ -270,7 +270,7 @@
                     // 存登录标识
                     localStorage.setItem('UserId', _result.userId);
                     localStorage.setItem('UserName', _result.userName);
-localStorage.setItem('Password', Password);  // 存用户输入的明文密码，供 check_login 校验
+localStorage.setItem('SessionToken', _result.sessionToken);  // 存会话令牌，不再存明文密码
                     showToast('登录成功，正在跳转...');
                     setTimeout(() => {
                         window.location.href = '/index.html';
