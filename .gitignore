@@ -14,3 +14,4 @@ Thumbs.db
 *.log
 tools/deploy.token
 tools/deploy.dbpass
+backups/

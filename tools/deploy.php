@@ -18,6 +18,8 @@
  *   action=info   参数: Token
  *   action=sql    参数: Token, Db（仅限 game_data/user_data/card_data）, Sql（单条语句）
  *                 DB 密码来源：LQ_DB_PASS 环境变量 或 tools/deploy.dbpass 文件
+ *   action=backup 参数: Token, Label（可选，默认时间戳）
+ *                 把整个项目源码 + 三个数据库导出到 backups/<Label>/，每次改代码前先跑
  *
  * 示例：
  *   curl -X POST https://你的域名/tools/deploy.php \
@@ -186,8 +188,81 @@ try {
             out(['code' => 0, 'message' => 'ok', 'affected' => $pdo->exec($s)]);
         }
 
+        case 'backup': {
+            // 参数: Label（可选）→ 输出到 backups/<Label>/：源码全量 + 三库 .sql 导出
+            $Label = preg_replace('/[^A-Za-z0-9_\-]/', '', trim($_POST['Label'] ?? ''));
+            if ($Label === '') $Label = date('Ymd-His');
+            $bkDir = $ROOT . '/backups/' . $Label;
+            if (is_dir($bkDir)) err('备份目录已存在: backups/' . $Label);
+            if (!mkdir($bkDir, 0755, true)) err('无法创建备份目录');
+            // 备份里有数据库导出，必须挡掉 web 直接下载
+            if (!is_file($ROOT . '/backups/.htaccess')) {
+                @file_put_contents($ROOT . '/backups/.htaccess', "Require all denied\nDeny from all\n");
+            }
+            if (!is_file($ROOT . '/backups/index.html')) {
+                @file_put_contents($ROOT . '/backups/index.html', '');
+            }
+
+            // 1) 复制源码（排除 backups/、.git、令牌/密码文件自身）
+            $skip = [$ROOT . '/backups', $ROOT . '/.git', __DIR__ . '/deploy.token', __DIR__ . '/deploy.dbpass'];
+            $srcDir = $bkDir . '/source';
+            mkdir($srcDir, 0755, true);
+            $iter = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($ROOT, FilesystemIterator::SKIP_DOTS),
+                RecursiveIteratorIterator::SELF_FIRST
+            );
+            $filesCopied = 0;
+            foreach ($iter as $item) {
+                $p = $item->getPathname();
+                $skipIt = false;
+                foreach ($skip as $s) {
+                    if ($p === $s || strpos($p, $s . '/') === 0) { $skipIt = true; break; }
+                }
+                if ($skipIt) continue;
+                $rel = substr($p, strlen($ROOT) + 1);
+                $dst = $srcDir . '/' . $rel;
+                if ($item->isDir()) { if (!is_dir($dst)) mkdir($dst, 0755, true); }
+                else { if (!is_dir(dirname($dst))) mkdir(dirname($dst), 0755, true); copy($p, $dst); $filesCopied++; }
+            }
+
+            // 2) 导出三个库（纯 PDO，不依赖 mysqldump）
+            $dbDir = $bkDir . '/db';
+            mkdir($dbDir, 0755, true);
+            $dumped = [];
+            foreach ($DB_WHITELIST as $db) {
+                try {
+                    $pdo = new PDO(
+                        "mysql:host=$DB_HOST;port=$DB_PORT;dbname=$db;charset=utf8mb4",
+                        $DB_USER, loadDbPass(),
+                        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]
+                    );
+                    $fh = fopen($dbDir . '/' . $db . '.sql', 'w');
+                    fwrite($fh, "-- backup of `$db` " . date('c') . "\nSET FOREIGN_KEY_CHECKS=0;\n");
+                    foreach ($pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN) as $t) {
+                        fwrite($fh, "\nDROP TABLE IF EXISTS `$t`;\n");
+                        $cr = $pdo->query("SHOW CREATE TABLE `$t`")->fetch();
+                        $create = $cr['Create Table'] ?? array_values($cr)[1] ?? '';
+                        fwrite($fh, $create . ";\n");
+                        $rows = $pdo->query("SELECT * FROM `$t`");
+                        while ($r = $rows->fetch(PDO::FETCH_ASSOC)) {
+                            $cols = implode(',', array_map(function($c){ return '`'.$c.'`'; }, array_keys($r)));
+                            $vals = implode(',', array_map(function($v) use ($pdo){ return $v === null ? 'NULL' : $pdo->quote((string)$v); }, array_values($r)));
+                            fwrite($fh, "INSERT INTO `$t` ($cols) VALUES ($vals);\n");
+                        }
+                    }
+                    fwrite($fh, "SET FOREIGN_KEY_CHECKS=1;\n");
+                    fclose($fh);
+                    $dumped[] = $db;
+                } catch (Throwable $e2) {
+                    $dumped[] = $db . '（失败: ' . $e2->getMessage() . '）';
+                }
+            }
+
+            out(['code' => 0, 'message' => 'ok', 'backup' => 'backups/' . $Label, 'files' => $filesCopied, 'dbs' => $dumped]);
+        }
+
         default:
-            err('action 必须是 write / read / list / delete / info / sql');
+            err('action 必须是 write / read / list / delete / info / sql / backup');
     }
 } catch (Throwable $e) {
     http_response_code(500);
