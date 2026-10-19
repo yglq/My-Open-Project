@@ -56,13 +56,21 @@ try {
     ];
 
     // 从 admin_config 获取自定义变量名
-    $_stmt3 = $_pdo->prepare("SELECT custom_vars FROM admin_config WHERE config_id = :cid LIMIT 1");
+    $_stmt3 = $_pdo->prepare("SELECT custom_vars, custom_tables, custom_vars_defaults FROM admin_config WHERE config_id = :cid LIMIT 1");
     $_stmt3->execute(['cid' => $ConfigId]);
-    $_customVarNames = $_stmt3->fetchColumn();
-    $_customVarNames = parseCustomVarNames($_customVarNames ?? '[]');
+    $_customCfg = $_stmt3->fetch();
+    $_customVarNames = parseCustomVarNames($_customCfg['custom_vars'] ?? '[]');
+    $_customTblDefs  = parseCustomTableDefs($_customCfg['custom_tables'] ?? '{}');
+    $_varDefaults    = json_decode($_customCfg['custom_vars_defaults'] ?? '{}', true) ?: [];
+
+    // 自定义变量：读侧表（新架构），主表老列做回退兼容
+    $_sideVars = customVarGetAll($ConfigId, $_user['id']);
 
     foreach ($_customVarNames as $_name) {
-        $_publicFields[$_name] = 'string'; // 自定义变量默认 string
+        $_publicFields[$_name] = 'custom_var';
+    }
+    foreach (array_keys($_customTblDefs) as $_tname) {
+        $_publicFields[$_tname] = 'custom_table';
     }
 
     // 收集请求的变量
@@ -71,6 +79,27 @@ try {
 
     foreach ($_publicFields as $_field => $_type) {
         if (isset($_REQUEST[$_field])) {
+            if ($_type === 'custom_var') {
+                // 侧表值 > 老列值（兼容旧数据） > 默认值
+                $val = $_sideVars[$_field] ?? ($_user[$_field] ?? null);
+                if ($val === null || $val === '') $val = $_varDefaults[$_field] ?? '0';
+                $_result[$_field] = $val;
+                continue;
+            }
+            if ($_type === 'custom_table') {
+                // 返回行数组（新架构）；老列 JSON 做回退
+                $_rows = customTableRows($ConfigId, $_user['id'], $_field);
+                if (empty($_rows) && !empty($_user[$_field])) {
+                    $_legacy = json_decode($_user[$_field], true);
+                    if (is_array($_legacy)) {
+                        if (!empty($_legacy) && array_keys($_legacy) !== range(0, count($_legacy) - 1)) $_legacy = [$_legacy];
+                        $_rows = $_legacy;
+                    }
+                }
+                $_result[$_field] = $_rows;
+                continue;
+            }
+
             $val = $_user[$_field] ?? null;
 
             switch ($_type) {

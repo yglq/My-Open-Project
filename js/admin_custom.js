@@ -87,7 +87,7 @@ function renderCustomTables() {
             return '<div class="var-item" style="margin-left:32px;">'
                 + '<span class="var-index">' + (ci + 1) + '</span>'
                 + '<span class="var-name">' + cname + '</span>'
-                + '<span class="var-value" style="font-size:10px;background:#f0f4ff;color:#4f6ef7;padding:1px 6px;border-radius:4px;">' + ctype + '</span>'
+                + '<span class="var-value" style="font-size:10px;background:#f0f4ff;color:#4f6ef7;padding:1px 6px;border-radius:4px;">' + (ctype === 'value' ? '数值' : '文本') + '</span>'
                 + '<input id="ColDefault_' + tblName.replace(/[^a-zA-Z0-9]/g, '_') + '_' + cname.replace(/[^a-zA-Z0-9]/g, '_') + '" '
                 + 'value="' + ((CustomTableDefaults[tblName] && CustomTableDefaults[tblName][cname]) || '') + '" '
                 + 'style="width:60px;padding:4px 6px;border:1px solid #e0d5c1;border-radius:6px;font-size:11px;outline:none;" '
@@ -111,7 +111,8 @@ function renderCustomTables() {
             + '</div></div>'
             + colsHtml
             + '<div class="add-row" style="margin-left:32px;">'
-            + '<input id="NewColName_' + tblName.replace(/[^a-zA-Z0-9]/g, '_') + '" placeholder="例如: col:value">'
+            + '<input id="NewColName_' + tblName.replace(/[^a-zA-Z0-9]/g, '_') + '" placeholder="列名">'
+            + '<select id="NewColType_' + tblName.replace(/[^a-zA-Z0-9]/g, '_') + '" style="padding:4px 8px;border:1px solid #e0d5c1;border-radius:6px;font-size:11px;outline:none;font-family:inherit;"><option value="value">数值</option><option value="string">文本</option></select>'
             + '<button class="btn-add" onclick="parent.addTableCol(\'' + tblName + '\')">添加列</button>'
             + '</div></div>';
     }).join('');
@@ -254,12 +255,11 @@ async function deleteTable(name) {
 async function addTableCol(tblName) {
     var safeId = tblName.replace(/[^a-zA-Z0-9]/g, '_');
     var input = document.getElementById('NewColName_' + safeId);
+    var typeSel = document.getElementById('NewColType_' + safeId);
     if (!input) return;
-    var raw = input.value.trim();
-    if (!raw) return alert('请输入列名:类型(例如 col:value)');
-    var match = raw.match(/^([a-zA-Z0-9_]+):(value|string)$/);
-    if (!match) return alert('格式错误，例如: teststr:string');
-    var colName = match[1], colType = match[2];
+    var colName = input.value.trim();
+    var colType = typeSel ? typeSel.value : 'value';
+    if (!colName) return alert('请输入列名');
     if (!/^[a-zA-Z0-9_]+$/.test(colName)) return alert('只能使用英文、数字、下划线');
     var err = validateName(colName);
     if (err) return alert(err);

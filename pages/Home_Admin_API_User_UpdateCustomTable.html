@@ -39,7 +39,9 @@
             <tr><td>Username</td><td>String</td><td class="required">是</td><td>子用户账号</td></tr>
             <tr><td>Password</td><td>String</td><td class="required">是</td><td>子用户密码</td></tr>
             <tr><td>TableName</td><td>String</td><td class="required">是</td><td>表名（必须在后台已定义）</td></tr>
-            <tr><td>Data</td><td>JSON</td><td class="required">是</td><td>JSON 数组字符串 [{"col":"val"}]</td></tr>
+            <tr><td>Action</td><td>String</td><td>否</td><td>replace（默认，整表替换）或 append（追加一行）</td></tr>
+            <tr><td>Data</td><td>JSON</td><td>replace 时必填</td><td>JSON 数组字符串 [{"col":"val"}]</td></tr>
+            <tr><td>Row</td><td>JSON</td><td>append 时必填</td><td>单行 JSON 对象 {"col":"val"}</td></tr>
         </table>
     </div>
     <div class="api-card">
@@ -51,7 +53,7 @@
     </div>
     <div class="api-card">
         <div class="api-section-title">提示</div>
-        <div class="api-hint">• TableName 必须在后台"自定义JSON"中已定义<br>• Data 的列名必须在表定义中存在<br>• 列不存在时会自动创建 JSON 列</div>
+        <div class="api-hint">• TableName 必须在后台"自定义JSON表"中已定义<br>• 每行的列名必须在表定义中存在<br>• 每行是独立记录：append 追加一行，replace 事务化整表替换<br>• 读取行数据用 get_var.php，直接传表名即可</div>
     </div>
     <div class="api-card">
         <div class="api-section-title">示例</div>

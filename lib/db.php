@@ -242,43 +242,122 @@ function createSubUserTable($tableName) {
     $_pdo->exec($_createSQL);
 }
 
-// 确保子用户表中存在自定义变量列与自定义 JSON 列（不存在则自动创建）
-// $customVarsJson:        admin_config.custom_vars        -> [{"name":"value1","type":"value"}, ...]
-// $customVarsDefJson:     admin_config.custom_vars_defaults -> {"value1":0, ...}
-// $customTblDefJson:      admin_config.custom_table_defaults -> {"tblName":{"col":default}, ...}
-function ensureCustomColumns($ConfigId, $customVarsJson, $customVarsDefJson, $customTblDefJson) {
+// ==================== 自定义变量 / JSON 表存储 ====================
+// 新架构：不再往子用户主表 ALTER 加列，数据放两张租户侧表：
+//   user_data.{ConfigId}_vars : user_id + var_name 一行一个变量（EAV）
+//   user_data.{ConfigId}_json : 一行 = JSON 表的一条记录（row_data JSON）
+// 好处：加/删/改变量不用动表结构；可按 var_name/table_name 索引查询；
+// JSON 表一行一记录，可追加/删除/分页，不再整列 blob 读改写。
+
+function _varsTable($ConfigId) { return "`user_data`.`" . _safeIdent($ConfigId) . "_vars`"; }
+function _jsonTable($ConfigId) { return "`user_data`.`" . _safeIdent($ConfigId) . "_json`"; }
+
+// 按需建侧表（CREATE IF NOT EXISTS 幂等，随便调用）
+function ensureVarStore($ConfigId) {
+    GetPDO()->exec("CREATE TABLE IF NOT EXISTS " . _varsTable($ConfigId) . " (
+        `user_id` INT UNSIGNED NOT NULL,
+        `var_name` VARCHAR(64) NOT NULL,
+        `var_value` TEXT NOT NULL,
+        PRIMARY KEY (user_id, var_name),
+        KEY idx_var_name (var_name)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+}
+function ensureJsonStore($ConfigId) {
+    GetPDO()->exec("CREATE TABLE IF NOT EXISTS " . _jsonTable($ConfigId) . " (
+        `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        `user_id` INT UNSIGNED NOT NULL,
+        `table_name` VARCHAR(64) NOT NULL,
+        `row_data` JSON NOT NULL,
+        KEY idx_user_table (user_id, table_name)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+}
+
+// 读取某子用户全部自定义变量：name => value
+function customVarGetAll($ConfigId, $userId) {
+    ensureVarStore($ConfigId);
+    $_s = GetPDO()->prepare("SELECT var_name, var_value FROM " . _varsTable($ConfigId) . " WHERE user_id = :u");
+    $_s->execute(['u' => $userId]);
+    return $_s->fetchAll(PDO::FETCH_KEY_PAIR) ?: [];
+}
+
+// 读取多个子用户的自定义变量：user_id => [name => value]
+function customVarGetBatch($ConfigId, array $userIds) {
+    if (empty($userIds)) return [];
+    ensureVarStore($ConfigId);
+    $_in = implode(',', array_map('intval', $userIds));
+    $_s = GetPDO()->query("SELECT user_id, var_name, var_value FROM " . _varsTable($ConfigId) . " WHERE user_id IN ($_in)");
+    $_out = [];
+    foreach ($_s->fetchAll() as $_r) $_out[$_r['user_id']][$_r['var_name']] = $_r['var_value'];
+    return $_out;
+}
+
+// 写单个自定义变量（存在即更新）
+function customVarSet($ConfigId, $userId, $varName, $value) {
+    ensureVarStore($ConfigId);
+    $_s = GetPDO()->prepare("INSERT INTO " . _varsTable($ConfigId) . " (user_id, var_name, var_value)
+        VALUES (:u, :n, :v) ON DUPLICATE KEY UPDATE var_value = VALUES(var_value)");
+    $_s->execute(['u' => $userId, 'n' => $varName, 'v' => (string)$value]);
+}
+
+// 读取某子用户某 JSON 表的全部行（关联数组数组）
+function customTableRows($ConfigId, $userId, $tableName) {
+    ensureJsonStore($ConfigId);
+    $_s = GetPDO()->prepare("SELECT row_data FROM " . _jsonTable($ConfigId) . " WHERE user_id = :u AND table_name = :t ORDER BY id");
+    $_s->execute(['u' => $userId, 't' => $tableName]);
+    $_rows = [];
+    foreach ($_s->fetchAll(PDO::FETCH_COLUMN) as $_j) {
+        $_d = json_decode($_j, true);
+        if (is_array($_d)) $_rows[] = $_d;
+    }
+    return $_rows;
+}
+
+// 整表替换（事务：删旧行 + 批量插入新行）
+function customTableReplace($ConfigId, $userId, $tableName, array $rows) {
+    ensureJsonStore($ConfigId);
     $_pdo = GetPDO();
-    $_safeTbl = preg_replace('/[^A-Za-z0-9_]/', '', (string)$ConfigId);
-    $_tbl = "`user_data`.`{$_safeTbl}`";
-
-    $_names = [];
-    // 来自 custom_vars 定义
-    $_vars = json_decode($customVarsJson ?: '[]', true) ?: [];
-    foreach ($_vars as $_v) {
-        if (is_array($_v)) $_names[] = preg_replace('/[^A-Za-z0-9_]/', '', (string)($_v['name'] ?? ''));
-    }
-    // 来自 custom_vars_defaults 的 key
-    $_def = json_decode($customVarsDefJson ?: '[]', true) ?: [];
-    foreach ($_def as $_k => $_v) $_names[] = preg_replace('/[^A-Za-z0-9_]/', '', (string)$_k);
-    $_names = array_unique(array_filter($_names));
-
-    foreach ($_names as $_n) {
-        $_chk = $_pdo->query("SHOW COLUMNS FROM {$_tbl} LIKE '{$_n}'");
-        if ($_chk->rowCount() === 0) {
-            $_pdo->exec("ALTER TABLE {$_tbl} ADD COLUMN `{$_n}` VARCHAR(255) DEFAULT '0'");
+    $_tbl = _jsonTable($ConfigId);
+    $_pdo->beginTransaction();
+    try {
+        $_pdo->prepare("DELETE FROM $_tbl WHERE user_id = :u AND table_name = :t")
+             ->execute(['u' => $userId, 't' => $tableName]);
+        $_ins = $_pdo->prepare("INSERT INTO $_tbl (user_id, table_name, row_data) VALUES (:u, :t, :r)");
+        foreach ($rows as $_row) {
+            $_ins->execute(['u' => $userId, 't' => $tableName, 'r' => json_encode($_row, JSON_UNESCAPED_UNICODE)]);
         }
+        $_pdo->commit();
+    } catch (Exception $e) {
+        if ($_pdo->inTransaction()) $_pdo->rollBack();
+        throw $e;
     }
+}
 
-    // 自定义 JSON 表列
-    $_tbls = json_decode($customTblDefJson ?: '[]', true) ?: [];
-    foreach ($_tbls as $_tname => $_cols) {
-        $_tname = preg_replace('/[^A-Za-z0-9_]/', '', (string)$_tname);
-        if ($_tname === '') continue;
-        $_chk = $_pdo->query("SHOW COLUMNS FROM {$_tbl} LIKE '{$_tname}'");
-        if ($_chk->rowCount() === 0) {
-            $_pdo->exec("ALTER TABLE {$_tbl} ADD COLUMN `{$_tname}` JSON DEFAULT NULL");
-        }
+// 追加一行
+function customTableAppend($ConfigId, $userId, $tableName, array $row) {
+    ensureJsonStore($ConfigId);
+    GetPDO()->prepare("INSERT INTO " . _jsonTable($ConfigId) . " (user_id, table_name, row_data) VALUES (:u, :t, :r)")
+        ->execute(['u' => $userId, 't' => $tableName, 'r' => json_encode($row, JSON_UNESCAPED_UNICODE)]);
+}
+
+// 注册/建号时按默认值播种（侧表）
+function seedCustomDefaults($ConfigId, $userId, $varsDefJson, $tblDefJson) {
+    $_vars = json_decode($varsDefJson ?: '{}', true) ?: [];
+    foreach ($_vars as $_n => $_v) {
+        $_n = _safeIdent($_n);
+        if ($_n !== '') customVarSet($ConfigId, $userId, $_n, $_v);
     }
+    $_tbls = json_decode($tblDefJson ?: '{}', true) ?: [];
+    foreach ($_tbls as $_t => $_cols) {
+        $_t = _safeIdent($_t);
+        if ($_t === '' || !is_array($_cols) || empty($_cols)) continue;
+        customTableAppend($ConfigId, $userId, $_t, $_cols);
+    }
+}
+
+// 兼容旧调用点：原“建列”函数改为建侧表（列已不需要）
+function ensureCustomColumns($ConfigId, $customVarsJson = '[]', $customVarsDefJson = '[]', $customTblDefJson = '[]') {
+    ensureVarStore($ConfigId);
+    ensureJsonStore($ConfigId);
 }
 
 // 获取客户端 IP

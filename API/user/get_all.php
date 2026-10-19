@@ -44,20 +44,25 @@ try {
     $_varNames = parseCustomVarNames($_customCfg['custom_vars'] ?? '[]');
     $_tblNames = parseCustomTableDefs($_customCfg['custom_tables'] ?? '{}');
 
-    // 构建自定义变量值
+    // 自定义变量：侧表值 > 老列值（兼容旧数据）
+    $_sideVars = customVarGetAll($ConfigId, $_user['id']);
     $_customVars = [];
     foreach ($_varNames as $_name) {
-        $_customVars[$_name] = $_user[$_name] ?? 0;
+        $_customVars[$_name] = $_sideVars[$_name] ?? ($_user[$_name] ?? 0);
     }
 
-    // 构建自定义表格值
+    // 自定义 JSON 表：侧表行 > 老列 JSON（兼容旧数据）
     $_customTables = [];
     foreach ($_tblNames as $_tblName => $_cols) {
-        $_raw = $_user[$_tblName] ?? null;
-        $_customTables[$_tblName] = [
-            'columns' => $_cols,
-            'rows'    => $_raw ? json_decode($_raw, true) : []
-        ];
+        $_rows = customTableRows($ConfigId, $_user['id'], $_tblName);
+        if (empty($_rows) && !empty($_user[$_tblName])) {
+            $_legacy = json_decode($_user[$_tblName], true);
+            if (is_array($_legacy)) {
+                if (!empty($_legacy) && array_keys($_legacy) !== range(0, count($_legacy) - 1)) $_legacy = [$_legacy];
+                $_rows = $_legacy;
+            }
+        }
+        $_customTables[$_tblName] = ['columns' => $_cols, 'rows' => $_rows];
     }
 
     echo json_encode([

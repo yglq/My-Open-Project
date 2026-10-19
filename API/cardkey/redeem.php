@@ -135,6 +135,7 @@ try {
     } elseif ($_type === 3) {
         // 自定义变量：value 型累加，string 型替换
         $_varTypes = _parseVarTypes($_config['custom_vars'] ?? '[]');
+        $_sideVars = customVarGetAll($ConfigId, $_uid);
         $_valueList = json_decode($_card['value_list'] ?? '[]', true) ?: [];
         if (!is_array($_valueList)) throw new Exception('卡密奖励数据格式错误');
 
@@ -145,15 +146,10 @@ try {
             if (!array_key_exists($_varName, $_varTypes)) {
                 throw new Exception('自定义变量不存在：' . $_varName);
             }
-            // 列不存在则自动创建
-            $_colCheck = $_pdo->query("SHOW COLUMNS FROM `user_data`.`$_userTable` LIKE '$_varName'");
-            if ($_colCheck->rowCount() === 0) {
-                $_pdo->exec("ALTER TABLE `user_data`.`$_userTable` ADD COLUMN `$_varName` VARCHAR(255) DEFAULT '0'");
-            }
-
             if (($_varTypes[$_varName] ?? 'string') === 'value') {
-                // 数值累加
-                $_cur = is_numeric($_user[$_varName] ?? '') ? $_user[$_varName] : 0;
+                // 数值累加（侧表值 > 老列值兼容）
+                $_curRaw = $_sideVars[$_varName] ?? ($_user[$_varName] ?? 0);
+                $_cur = is_numeric($_curRaw) ? $_curRaw : 0;
                 $_newVal = floatval($_cur) + floatval($_varVal);
                 // 整数保持整数形式
                 if (is_int($_cur + 0) && is_int(floatval($_varVal) + 0) && strpos((string)$_varVal, '.') === false) {
@@ -164,8 +160,8 @@ try {
                 $_newVal = (string)$_varVal;
             }
 
-            $_stmtU = $_pdo->prepare("UPDATE `user_data`.`$_userTable` SET `$_varName` = :v WHERE id = :uid");
-            $_stmtU->execute(['v' => $_newVal, 'uid' => $_uid]);
+            customVarSet($ConfigId, $_uid, $_varName, $_newVal);
+            $_sideVars[$_varName] = (string)$_newVal;
             $_granted['vars'][] = ['name' => $_varName, 'value' => $_newVal];
         }
 
@@ -181,17 +177,19 @@ try {
             $_val = $_item['value'] ?? null;
             if ($_tbl === '' || $_col === '') continue;
 
-            // JSON 列不存在则自动创建
-            $_colCheck = $_pdo->query("SHOW COLUMNS FROM `user_data`.`$_userTable` LIKE '$_tbl'");
-            if ($_colCheck->rowCount() === 0) {
-                $_pdo->exec("ALTER TABLE `user_data`.`$_userTable` ADD COLUMN `$_tbl` JSON DEFAULT NULL");
+            // 读取该行 JSON 表的首行对象（老列 JSON 回退），按 key 合并
+            $_rows = customTableRows($ConfigId, $_uid, $_tbl);
+            if (empty($_rows)) {
+                $_stmtJ = $_pdo->prepare("SELECT `$_tbl` FROM `user_data`.`$_userTable` WHERE id = :uid");
+                $_stmtJ->execute(['uid' => $_uid]);
+                $_raw = $_stmtJ->fetchColumn();
+                $_legacy = $_raw !== null ? json_decode($_raw, true) : [];
+                if (is_array($_legacy)) {
+                    if (!empty($_legacy) && array_keys($_legacy) !== range(0, count($_legacy) - 1)) $_legacy = [$_legacy];
+                    $_rows = $_legacy;
+                }
             }
-
-            // 读取当前对象
-            $_stmtJ = $_pdo->prepare("SELECT `$_tbl` FROM `user_data`.`$_userTable` WHERE id = :uid");
-            $_stmtJ->execute(['uid' => $_uid]);
-            $_raw = $_stmtJ->fetchColumn();
-            $_cur = ($_raw !== null) ? json_decode($_raw, true) : [];
+            $_cur = $_rows[0] ?? [];
             if (!is_array($_cur)) $_cur = [];
 
             // 按 key 合并（数值累加，其余替换）
@@ -205,8 +203,8 @@ try {
                 $_cur[$_col] = $_val;
             }
 
-            $_stmtU = $_pdo->prepare("UPDATE `user_data`.`$_userTable` SET `$_tbl` = :j WHERE id = :uid");
-            $_stmtU->execute(['j' => json_encode($_cur, JSON_UNESCAPED_UNICODE), 'uid' => $_uid]);
+            $_rows[0] = $_cur;
+            customTableReplace($ConfigId, $_uid, $_tbl, $_rows);
             $_granted['json'][] = ['table' => $_tbl, 'col' => $_col, 'value' => $_cur[$_col]];
         }
 
