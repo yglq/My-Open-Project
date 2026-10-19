@@ -18,64 +18,61 @@ try {
 
     $_pdo = GetPDO();
 
-    // 取群聊数据
-    $_stmt = $_pdo->prepare("SELECT chat_json FROM chat_data WHERE chat_id = :cid LIMIT 1");
-    $_stmt->execute(['cid' => $ChatId]);
-    $_chat = $_stmt->fetch();
-    if (!$_chat) throw new Exception('群聊不存在');
+    $_stmt = $_pdo->prepare("SELECT is_group, group_name, group_avatar, owner_id FROM chat_conversations WHERE chat_id = :c LIMIT 1");
+    $_stmt->execute(['c' => $ChatId]);
+    $_conv = $_stmt->fetch();
+    if (!$_conv) throw new Exception('群聊不存在');
+    if (!intval($_conv['is_group'])) throw new Exception('不是群聊');
 
-    $_json = json_decode($_chat['chat_json'] ?? '[]', true);
-    $_members = $_json['Members'] ?? [];
-    $_isGroup = count($_members) > 2;
+    $_ownerId = intval($_conv['owner_id']);
+    $_members = chatMemberMap($_pdo, $ChatId);
 
-    if (!$_isGroup) throw new Exception('不是群聊');
+    // 成员详情（批量）
+    $_memberIds = array_map('intval', array_keys($_members));
+    $_usersById = [];
+    if (!empty($_memberIds)) {
+        $_ph = implode(',', array_fill(0, count($_memberIds), '?'));
+        $_stmtU = $_pdo->prepare("SELECT user_id, nickname, username, avatar, bio FROM users WHERE user_id IN ($_ph)");
+        $_stmtU->execute($_memberIds);
+        foreach ($_stmtU->fetchAll() as $_u) $_usersById[intval($_u['user_id'])] = $_u;
+    }
 
-    // 群主 = 第一个创建的人（Members 里按加入顺序排列，取第一个）
-    $_memberKeys = array_keys($_members);
-    $_ownerId = $_memberKeys[0];
-
-    // 查所有成员信息
     $_memberList = [];
     foreach ($_members as $_mid => $_mname) {
-        $_stmt2 = $_pdo->prepare("SELECT user_id, nickname, username, avatar, bio FROM users WHERE user_id = :uid LIMIT 1");
-        $_stmt2->execute(['uid' => intval($_mid)]);
-        $_u = $_stmt2->fetch();
+        $_mid = intval($_mid);
+        $_u = $_usersById[$_mid] ?? null;
         $_memberList[] = [
-            'user_id'  => intval($_mid),
+            'user_id'  => $_mid,
             'name'     => $_u ? ($_u['nickname'] ?: $_u['username']) : $_mname,
             'avatar'   => $_u ? ($_u['avatar'] ?: 'icon.png') : 'icon.png',
             'bio'      => $_u ? ($_u['bio'] ?: '') : '',
-            'is_owner' => (intval($_mid) === intval($_ownerId))
+            'is_owner' => ($_mid === $_ownerId)
         ];
     }
 
-    // 获取当前用户的私聊好友（非成员）
+    // 非成员好友：与我有私聊（is_group=0 共同成员）但不在此群的人
     $_nonMembers = [];
-    $_stmt3 = $_pdo->query("SELECT chat_id, chat_json FROM chat_data");
-    $_allChats = $_stmt3->fetchAll();
-    $_seenIds = array_keys($_members);
-
-    foreach ($_allChats as $_c) {
-        $_cJson = json_decode($_c['chat_json'], true);
-        $_cMembers = $_cJson['Members'] ?? [];
-        if (count($_cMembers) != 2) continue;
-        if (!array_key_exists(strval($UserId), $_cMembers)) continue;
-
-        foreach ($_cMembers as $_cmid => $_cmname) {
-            if (intval($_cmid) === $UserId || in_array($_cmid, $_seenIds)) continue;
-            $_seenIds[] = $_cmid;
-
-            $_stmt4 = $_pdo->prepare("SELECT user_id, nickname, username, avatar, status FROM users WHERE user_id = :uid LIMIT 1");
-            $_stmt4->execute(['uid' => intval($_cmid)]);
-            $_cu = $_stmt4->fetch();
-            if ($_cu && $_cu['status'] == 0) {
-                $_nonMembers[] = [
-                    'user_id'  => intval($_cmid),
-                    'nickname' => $_cu['nickname'] ?: $_cu['username'],
-                    'avatar'   => $_cu['avatar'] ?: 'icon.png'
-                ];
-            }
-            break;
+    $_seenIds = array_map('intval', $_memberIds);
+    $_stmtF = $_pdo->prepare(
+        "SELECT DISTINCT m2.user_id FROM chat_members m1
+         JOIN chat_members m2 ON m1.chat_id = m2.chat_id
+         JOIN chat_conversations c ON c.chat_id = m1.chat_id
+         WHERE m1.user_id = :u AND m2.user_id <> :u AND c.is_group = 0"
+    );
+    $_stmtF->execute(['u' => $UserId]);
+    foreach ($_stmtF->fetchAll(PDO::FETCH_COLUMN) as $_fid) {
+        $_fid = intval($_fid);
+        if (in_array($_fid, $_seenIds, true)) continue;
+        $_seenIds[] = $_fid;
+        $_stmt4 = $_pdo->prepare("SELECT user_id, nickname, username, avatar, status FROM users WHERE user_id = :uid LIMIT 1");
+        $_stmt4->execute(['uid' => $_fid]);
+        $_cu = $_stmt4->fetch();
+        if ($_cu && $_cu['status'] == 0) {
+            $_nonMembers[] = [
+                'user_id'  => $_fid,
+                'nickname' => $_cu['nickname'] ?: $_cu['username'],
+                'avatar'   => $_cu['avatar'] ?: 'icon.png'
+            ];
         }
     }
 
@@ -83,10 +80,10 @@ try {
         'code'        => 0,
         'members'     => $_memberList,
         'non_members' => $_nonMembers,
-        'owner_id'    => intval($_ownerId),
-        'is_owner'    => (intval($UserId) === intval($_ownerId)),
-        'group_name'  => $_json['GroupName'] ?? '',
-        'group_avatar'=> $_json['GroupAvatar'] ?? 'icon.png',
+        'owner_id'    => $_ownerId,
+        'is_owner'    => ($UserId === $_ownerId),
+        'group_name'  => $_conv['group_name'] ?? '',
+        'group_avatar'=> $_conv['group_avatar'] ?? 'icon.png',
         'member_count'=> count($_members),
         'max_members' => 100
     ], JSON_UNESCAPED_UNICODE);

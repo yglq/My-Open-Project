@@ -423,6 +423,60 @@ function wsPublishToMembers(array $memberIds, array $payload) {
     @fclose($fp);
 }
 
+// ========== 聊天三表助手（chat_conversations/chat_members/chat_messages） ==========
+
+function chatIsMember(PDO $pdo, $chatId, $uid) {
+    $st = $pdo->prepare("SELECT 1 FROM chat_members WHERE chat_id = :c AND user_id = :u LIMIT 1");
+    $st->execute(['c' => $chatId, 'u' => intval($uid)]);
+    return (bool)$st->fetchColumn();
+}
+
+function chatMemberIds(PDO $pdo, $chatId) {
+    $st = $pdo->prepare("SELECT user_id FROM chat_members WHERE chat_id = :c");
+    $st->execute(['c' => $chatId]);
+    return array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
+}
+
+function chatMemberMap(PDO $pdo, $chatId) {
+    $st = $pdo->prepare("SELECT user_id, member_name FROM chat_members WHERE chat_id = :c");
+    $st->execute(['c' => $chatId]);
+    return $st->fetchAll(PDO::FETCH_KEY_PAIR);
+}
+
+function chatMaxMsgId(PDO $pdo, $chatId) {
+    $st = $pdo->prepare("SELECT COALESCE(MAX(msg_id),0) FROM chat_messages WHERE chat_id = :c");
+    $st->execute(['c' => $chatId]);
+    return intval($st->fetchColumn());
+}
+
+// 行记录 → 前端消息对象（保持旧契约：MsgId/SenderId/Type/Time + 类型字段）
+function chatRowToMsg(array $row) {
+    $msg = [
+        'MsgId'    => intval($row['msg_id']),
+        'SenderId' => intval($row['sender_id']),
+        'Type'     => $row['mtype'],
+        'Time'     => date('Y-m-d-H-i-s', strtotime($row['created_at'])),
+    ];
+    $body = json_decode($row['body'] ?? '{}', true);
+    return is_array($body) ? array_merge($msg, $body) : $msg;
+}
+
+// 生成不重复的 chat_id
+function chatNewId(PDO $pdo) {
+    for ($i = 0; $i < 10; $i++) {
+        $id = randomString(21);
+        $st = $pdo->prepare("SELECT COUNT(*) FROM chat_conversations WHERE chat_id = :c");
+        $st->execute(['c' => $id]);
+        if ($st->fetchColumn() == 0) return $id;
+    }
+    throw new Exception('生成对话ID失败');
+}
+
+// 推送该会话全部在线成员（静默失败）
+function chatPushRefresh(PDO $pdo, $chatId, array $extra = []) {
+    wsPublishToMembers(chatMemberIds($pdo, $chatId), array_merge(['type' => 'chat_refresh', 'chat_id' => $chatId], $extra));
+}
+
 // 仅允许字母数字下划线作为 SQL 标识符（表名/列名），防止注入
 function _safeIdent($name) {
     return preg_replace('/[^A-Za-z0-9_]/', '', (string)$name);

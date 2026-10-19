@@ -3,6 +3,7 @@
  * 获取对话详细消息（分页）
  * POST: UserId, ChatId
  * POST: Offset (默认0), Limit (默认20)
+ * 新结构：消息从 chat_messages 查，已读进度存 chat_members.last_read_id
  */
 require_once __DIR__ . '/../lib/db.php';
 header('Content-Type: application/json; charset=utf-8');
@@ -23,71 +24,46 @@ try {
 
     $_pdo = GetPDO();
 
-    // 取对话
-    $_stmt = $_pdo->prepare("SELECT chat_json FROM chat_data WHERE chat_id = :cid LIMIT 1");
-    $_stmt->execute(['cid' => $ChatId]);
-    $_chat = $_stmt->fetch();
-    if (!$_chat) throw new Exception('对话不存在');
-
-    $_fullJson = json_decode($_chat['chat_json'] ?? '[]', true);
-    $_members = $_fullJson['Members'] ?? [];
-
-    if (!array_key_exists(strval($UserId), $_members)) {
+    if (!chatIsMember($_pdo, $ChatId, $UserId)) {
         throw new Exception('无权访问');
     }
 
-    $_totalMsg = intval($_fullJson['TotalMsg'] ?? 0);
-    $_allMessages = $_fullJson['Messages'] ?? [];
+    // 会话信息
+    $_stmtC = $_pdo->prepare("SELECT is_group, group_name, group_avatar, owner_id FROM chat_conversations WHERE chat_id = :c LIMIT 1");
+    $_stmtC->execute(['c' => $ChatId]);
+    $_conv = $_stmtC->fetch();
+    if (!$_conv) throw new Exception('对话不存在');
+    $_isGroup = intval($_conv['is_group']) === 1;
 
-    // 分页截取：从 Offset 开始，取 Limit 条
-    $_slice = array_slice($_allMessages, $Offset, $Limit);
+    $_members = chatMemberMap($_pdo, $ChatId);
 
-    // 已信任 ImagePath，不做 file_exists 检测
+    // 消息总数 + 分页（倒序，最新在前）
+    $_stmtN = $_pdo->prepare("SELECT COUNT(*) FROM chat_messages WHERE chat_id = :c");
+    $_stmtN->execute(['c' => $ChatId]);
+    $_totalMsg = intval($_stmtN->fetchColumn());
 
-    // 更新用户 chat_list
-    $_stmt2 = $_pdo->prepare("SELECT chat_list FROM users WHERE user_id = :uid LIMIT 1");
-    $_stmt2->execute(['uid' => $UserId]);
-    $_user = $_stmt2->fetch();
-    $_chatList = json_decode($_user['chat_list'] ?? '[]', true) ?: [];
+    $_stmtM = $_pdo->prepare("SELECT * FROM chat_messages WHERE chat_id = :c ORDER BY msg_id DESC LIMIT :o, :l");
+    $_stmtM->bindValue('o', $Offset, PDO::PARAM_INT);
+    $_stmtM->bindValue('l', $Limit, PDO::PARAM_INT);
+    $_stmtM->bindValue('c', $ChatId);
+    $_stmtM->execute();
+    $_rows = $_stmtM->fetchAll();
+    $_slice = array_map('chatRowToMsg', $_rows);
 
-    $_found = false;
-    foreach ($_chatList as &$_item) {
-        if ($_item['chat_id'] === $ChatId) {
-            $_item['last_msg_id'] = $_totalMsg;
-            $_found = true;
-            break;
-        }
-    }
-    unset($_item);
-    if (!$_found) {
-        $_chatList[] = ['chat_id' => $ChatId, 'last_msg_id' => $_totalMsg];
-    }
-
-    $_newChatList = json_encode($_chatList, JSON_UNESCAPED_UNICODE);
-    $_stmt3 = $_pdo->prepare("UPDATE users SET chat_list = :clist WHERE user_id = :uid");
-    $_stmt3->execute(['clist' => $_newChatList, 'uid' => $UserId]);
-
-    // 更新 ReadList（只在首次打开时更新，即 Offset=0）
+    // 标记已读（仅在首屏，即 Offset=0）
+    $_maxId = chatMaxMsgId($_pdo, $ChatId);
     if ($Offset === 0) {
-        if (!empty($_fullJson['ReadList'])) {
-            $_fullJson['ReadList'][strval($UserId)] = $_totalMsg;
-        } else {
-            $_fullJson['ReadList'] = [strval($UserId) => $_totalMsg];
-        }
-
-        foreach ($_fullJson['ReadList'] as $_uid => $_readId) {
-            if (intval($_readId) > $_totalMsg) {
-                $_fullJson['ReadList'][$_uid] = $_totalMsg;
-            }
-        }
-
-        $_newJson = json_encode($_fullJson, JSON_UNESCAPED_UNICODE);
-        $_stmt4 = $_pdo->prepare("UPDATE chat_data SET chat_json = :json WHERE chat_id = :cid");
-        $_stmt4->execute(['json' => $_newJson, 'cid' => $ChatId]);
+        $_pdo->prepare("UPDATE chat_members SET last_read_id = :m WHERE chat_id = :c AND user_id = :u")
+             ->execute(['m' => $_maxId, 'c' => $ChatId, 'u' => $UserId]);
     }
 
+    // 已读进度：user_id => last_read_id
+    $_readList = chatMemberIds($_pdo, $ChatId);
+    $_stmtR = $_pdo->prepare("SELECT user_id, last_read_id FROM chat_members WHERE chat_id = :c");
+    $_stmtR->execute(['c' => $ChatId]);
+    $_readList = array_map('intval', $_stmtR->fetchAll(PDO::FETCH_KEY_PAIR));
 
-        // 获取当前用户已有的数据库表名列表
+    // 获取当前用户已有的数据库表名列表
     $_myTables = [];
     $_stmt5 = $_pdo->prepare("SELECT table_data FROM data_tables_registry WHERE user_id = :uid LIMIT 1");
     $_stmt5->execute(['uid' => $UserId]);
@@ -98,49 +74,39 @@ try {
             $_myTables[] = $_item['table'] ?? '';
         }
     }
-// 构建已读用户详情列表
-$_readUserList = [];
-if (!empty($_fullJson['ReadList'])) {
-    $_userIds = array_keys($_fullJson['ReadList']);
-    if (!empty($_userIds)) {
+
+    // 已读用户详情列表
+    $_readUserList = [];
+    if (!empty($_readList)) {
+        $_userIds = array_keys($_readList);
         $_placeholders = implode(',', array_fill(0, count($_userIds), '?'));
         $_stmt6 = $_pdo->prepare("SELECT user_id, nickname, username, avatar FROM users WHERE user_id IN ($_placeholders)");
         $_stmt6->execute(array_map('intval', $_userIds));
-        $_users = $_stmt6->fetchAll();
-        foreach ($_users as $_u) {
+        foreach ($_stmt6->fetchAll() as $_u) {
             $_readUserList[$_u['user_id']] = [
                 'name'   => $_u['nickname'] ?: $_u['username'],
                 'avatar' => $_u['avatar'] ?: 'icon.png'
             ];
         }
     }
-}
 
-// 成员头像映射
-$_memberAvatars = [];
-foreach ($_members as $_mid => $_mname) {
-    $_stmtA = $_pdo->prepare("SELECT avatar FROM users WHERE user_id = :uid LIMIT 1");
-    $_stmtA->execute(['uid' => intval($_mid)]);
-    $_av = $_stmtA->fetchColumn();
-    $_memberAvatars[$_mid] = $_av ?: 'icon.png';
-}
-// 成员 VIP 状态
-$_memberVipStatus = [];
-$_now = date('Y-m-d H:i:s');
-foreach ($_members as $_mid => $_mname) {
-    $_stmtV = $_pdo->prepare("SELECT vip_time, svip_time FROM users WHERE user_id = :uid LIMIT 1");
-    $_stmtV->execute(['uid' => intval($_mid)]);
-    $_v = $_stmtV->fetch();
-    if ($_v && $_v['svip_time'] && $_v['svip_time'] > $_now) {
-        $_memberVipStatus[$_mid] = 'svip';
-    } elseif ($_v && $_v['vip_time'] && $_v['vip_time'] > $_now) {
-        $_memberVipStatus[$_mid] = 'vip';
-    } else {
-        $_memberVipStatus[$_mid] = 'none';
+    // 成员头像 + VIP（批量一次查完）
+    $_memberIds = array_map('intval', array_keys($_members));
+    $_memberAvatars = [];
+    $_memberVipStatus = [];
+    $_now = date('Y-m-d H:i:s');
+    if (!empty($_memberIds)) {
+        $_ph = implode(',', array_fill(0, count($_memberIds), '?'));
+        $_stmtU = $_pdo->prepare("SELECT user_id, avatar, vip_time, svip_time FROM users WHERE user_id IN ($_ph)");
+        $_stmtU->execute($_memberIds);
+        foreach ($_stmtU->fetchAll() as $_u) {
+            $_memberAvatars[$_u['user_id']] = $_u['avatar'] ?: 'icon.png';
+            if ($_u['svip_time'] && $_u['svip_time'] > $_now) $_memberVipStatus[$_u['user_id']] = 'svip';
+            elseif ($_u['vip_time'] && $_u['vip_time'] > $_now) $_memberVipStatus[$_u['user_id']] = 'vip';
+            else $_memberVipStatus[$_u['user_id']] = 'none';
+        }
     }
-}
 
-    // 构建返回数据
     $_result = [
         'ChatId'          => $ChatId,
         'Members'         => $_members,
@@ -149,15 +115,15 @@ foreach ($_members as $_mid => $_mname) {
         'Limit'           => $Limit,
         'HasMore'         => ($Offset + $Limit) < $_totalMsg,
         'Messages'        => $_slice,
-        'ReadList'        => $_fullJson['ReadList'] ?? [],
-        'GroupAvatar'     => $_fullJson['GroupAvatar'] ?? '',
-        'GroupMemberCount'=> $_fullJson['GroupMemberCount'] ?? 0,
-        'GroupName'       => $_fullJson['GroupName'] ?? '',
-        'IsGroup'         => count($_members) > 2,
-'ReadUserList' => $_readUserList,
-     'MyTables'        => $_myTables,
-     'MemberAvatars' => $_memberAvatars,
-     'MemberVipStatus' => $_memberVipStatus
+        'ReadList'        => $_readList,
+        'GroupAvatar'     => $_conv['group_avatar'] ?? '',
+        'GroupMemberCount'=> count($_members),
+        'GroupName'       => $_conv['group_name'] ?? '',
+        'IsGroup'         => $_isGroup,
+        'ReadUserList'    => $_readUserList,
+        'MyTables'        => $_myTables,
+        'MemberAvatars'   => $_memberAvatars,
+        'MemberVipStatus' => $_memberVipStatus
     ];
     echo json_encode([
         'code' => 0,

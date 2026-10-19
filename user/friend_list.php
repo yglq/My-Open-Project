@@ -3,6 +3,7 @@
  * 获取当前用户的所有私聊好友
  * POST: UserId
  * 返回：好友列表 [{user_id, nickname, avatar, chat_id}]
+ * 新结构：好友 = 与我同处一个 is_group=0 会话的对方
  */
 require_once __DIR__ . '/../lib/db.php';
 header('Content-Type: application/json; charset=utf-8');
@@ -17,42 +18,32 @@ try {
 
     $_pdo = GetPDO();
 
-    // 只取包含当前用户的对话（JSON 成员索引过滤，不再全表扫描）
-    $_stmt = $_pdo->prepare("SELECT chat_id, chat_json FROM chat_data WHERE JSON_CONTAINS_PATH(chat_json, 'one', :path)");
-    $_stmt->execute(['path' => '$.Members."' . $UserId . '"']);
-    $_allChats = $_stmt->fetchAll();
+    $_stmt = $_pdo->prepare(
+        "SELECT m2.user_id AS other_id, m1.chat_id FROM chat_members m1
+         JOIN chat_members m2 ON m1.chat_id = m2.chat_id
+         JOIN chat_conversations c ON c.chat_id = m1.chat_id
+         WHERE m1.user_id = :u AND m2.user_id <> :u AND c.is_group = 0"
+    );
+    $_stmt->execute(['u' => $UserId]);
+    $_pairs = $_stmt->fetchAll();
 
     $_friends = [];
     $_seenIds = [];
+    foreach ($_pairs as $_p) {
+        $_mid = intval($_p['other_id']);
+        if (in_array($_mid, $_seenIds, true)) continue;
+        $_seenIds[] = $_mid;
 
-    foreach ($_allChats as $_chat) {
-        $_json = json_decode($_chat['chat_json'] ?? '[]', true);
-        $_members = $_json['Members'] ?? [];
-
-        // 只要私聊（2人）
-        if (count($_members) != 2) continue;
-        if (!array_key_exists(strval($UserId), $_members)) continue;
-
-        // 找对方
-        foreach ($_members as $_mid => $_mname) {
-            if (intval($_mid) === $UserId) continue;
-            if (in_array($_mid, $_seenIds)) continue;
-            $_seenIds[] = $_mid;
-
-            // 查对方信息
-            $_stmt2 = $_pdo->prepare("SELECT user_id, nickname, username, avatar, status FROM users WHERE user_id = :uid LIMIT 1");
-            $_stmt2->execute(['uid' => intval($_mid)]);
-            $_u = $_stmt2->fetch();
-
-            if ($_u && $_u['status'] == 0) {
-                $_friends[] = [
-                    'user_id'  => intval($_mid),
-                    'nickname' => $_u['nickname'] ?: $_u['username'],
-                    'avatar'   => $_u['avatar'] ?: 'icon.png',
-                    'chat_id'  => $_chat['chat_id']
-                ];
-            }
-            break;
+        $_stmt2 = $_pdo->prepare("SELECT user_id, nickname, username, avatar, status FROM users WHERE user_id = :uid LIMIT 1");
+        $_stmt2->execute(['uid' => $_mid]);
+        $_u = $_stmt2->fetch();
+        if ($_u && $_u['status'] == 0) {
+            $_friends[] = [
+                'user_id'  => $_mid,
+                'nickname' => $_u['nickname'] ?: $_u['username'],
+                'avatar'   => $_u['avatar'] ?: 'icon.png',
+                'chat_id'  => $_p['chat_id']
+            ];
         }
     }
 

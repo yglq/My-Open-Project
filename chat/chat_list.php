@@ -3,6 +3,7 @@
  * 获取当前用户的消息列表
  * POST: UserId
  * 返回：对话列表，包含最后一条消息摘要和未读数
+ * 新结构：成员关系/已读进度/最后消息全部从三张表查
  */
 require_once __DIR__ . '/../lib/db.php';
 header('Content-Type: application/json; charset=utf-8');
@@ -17,128 +18,105 @@ try {
 
     $_pdo = GetPDO();
 
-    // 获取用户的 chat_list
-    $_stmt = $_pdo->prepare("SELECT chat_list FROM users WHERE user_id = :uid LIMIT 1");
-    $_stmt->execute(['uid' => $UserId]);
-    $_user = $_stmt->fetch();
-    if (!$_user) throw new Exception('用户不存在');
+    // 我加入的全部会话 + 我的已读位置
+    $_stmt = $_pdo->prepare("SELECT chat_id, last_read_id FROM chat_members WHERE user_id = :u ORDER BY joined_at ASC");
+    $_stmt->execute(['u' => $UserId]);
+    $_myChats = $_stmt->fetchAll();
 
-    $_chatList = json_decode($_user['chat_list'] ?? '[]', true) ?: [];
     $_result = [];
 
-    foreach ($_chatList as $_item) {
-        $_chatId = $_item['chat_id'];
-        $_lastMsgId = intval($_item['last_msg_id'] ?? 0);
+    foreach ($_myChats as $_mc) {
+        $_chatId = $_mc['chat_id'];
+        $_lastRead = intval($_mc['last_read_id']);
 
-        // 取对话数据
-        $_stmt2 = $_pdo->prepare("SELECT chat_json FROM chat_data WHERE chat_id = :cid LIMIT 1");
-        $_stmt2->execute(['cid' => $_chatId]);
-        $_chat = $_stmt2->fetch();
-        if (!$_chat) continue;
+        $_stmtC = $_pdo->prepare("SELECT is_group, group_name, group_avatar FROM chat_conversations WHERE chat_id = :c LIMIT 1");
+        $_stmtC->execute(['c' => $_chatId]);
+        $_conv = $_stmtC->fetch();
+        if (!$_conv) continue;
+        $_isGroup = intval($_conv['is_group']) === 1;
 
-        $_chatJson = json_decode($_chat['chat_json'] ?? '[]', true);
-        $_members = $_chatJson['Members'] ?? [];
-        $_messages = $_chatJson['Messages'] ?? [];
-        $_totalMsg = intval($_chatJson['TotalMsg'] ?? 0);
-
-        // 判断私聊还是群聊
-        $_isGroup = count($_members) > 2;
-        $_otherMemberId = null;
-        $_otherMemberName = '';
-        $_avatar = 'icon.png';
-
-        if (!$_isGroup) {
-            // 私聊：找对方 ID
-            foreach ($_members as $_mid => $_mname) {
-                if (intval($_mid) !== $UserId) {
-                    $_otherMemberId = $_mid;
-                    $_otherMemberName = $_mname;
-                    break;
-                }
-            }
-            // 获取对方头像（简单取 users 表）
-            if ($_otherMemberId) {
-                $_stmt3 = $_pdo->prepare("SELECT avatar, nickname FROM users WHERE user_id = :uid LIMIT 1");
-                $_stmt3->execute(['uid' => $_otherMemberId]);
-                $_targetUser = $_stmt3->fetch();
-                if ($_targetUser) {
-                    $_otherMemberName = $_targetUser['nickname'] ?: $_otherMemberName;
-                    $_avatar = $_targetUser['avatar'] ?: 'icon.png';
-                }
-            }
-        } else {
-            // 群聊
-            $_otherMemberName = $_chatJson['GroupName'] ?? '群聊';
-            $_avatar = $_chatJson['GroupAvatar'] ?? 'icon.png';
-        }
+        $_members = chatMemberMap($_pdo, $_chatId);
 
         // 最后一条消息
-        $_lastMsg = !empty($_messages) ? $_messages[0] : null;
+        $_stmtL = $_pdo->prepare("SELECT * FROM chat_messages WHERE chat_id = :c ORDER BY msg_id DESC LIMIT 1");
+        $_stmtL->execute(['c' => $_chatId]);
+        $_lastRow = $_stmtL->fetch();
         $_lastText = '';
-        if ($_lastMsg) {
+        if ($_lastRow) {
+            $_lastMsg = chatRowToMsg($_lastRow);
             $_type = $_lastMsg['Type'] ?? 'Message';
-       if ($_type === 'Message') {
-    $_lastText = $_lastMsg['Text'] ?? '';
-} elseif ($_type === 'Image') {
-    $_lastText = '[图片]';
-} elseif ($_type === 'InviteStudio') {
-    $_lastText = '邀请工作室--' . ($_lastMsg['StudioName'] ?? '');
-} elseif ($_type === 'SendCoin') {
-    $_lastText = '赠送--' . ($_lastMsg['Num'] ?? 0) . '金币';
-} elseif ($_type === 'RequestCoin') {
-    $_lastText = '索要--' . ($_lastMsg['Num'] ?? 0) . '金币';
-}
+            if ($_type === 'Message') $_lastText = $_lastMsg['Text'] ?? '';
+            elseif ($_type === 'Image') $_lastText = '[图片]';
+            elseif ($_type === 'InviteStudio') $_lastText = '邀请工作室--' . ($_lastMsg['StudioName'] ?? '');
+            elseif ($_type === 'SendCoin') $_lastText = '赠送--' . ($_lastMsg['Num'] ?? 0) . '金币';
+            elseif ($_type === 'RequestCoin') $_lastText = '索要--' . ($_lastMsg['Num'] ?? 0) . '金币';
             $_lastText = mb_strlen($_lastText) > 20 ? mb_substr($_lastText, 0, 20) . '...' : $_lastText;
         }
 
-        // 未读数
-        $_unread = max(0, $_totalMsg - $_lastMsgId);
-// 获取对方 VIP 状态（私聊）
-$_targetVip = 'none';
-if (!$_isGroup && $_otherMemberId) {
-    $_stmtV = $_pdo->prepare("SELECT vip_time, svip_time FROM users WHERE user_id = :uid LIMIT 1");
-    $_stmtV->execute(['uid' => $_otherMemberId]);
-    $_v = $_stmtV->fetch();
-    $_now = date('Y-m-d H:i:s');
-    if ($_v && $_v['svip_time'] && $_v['svip_time'] > $_now) {
-        $_targetVip = 'svip';
-    } elseif ($_v && $_v['vip_time'] && $_v['vip_time'] > $_now) {
-        $_targetVip = 'vip';
-    }
-}
+        // 未读数：msg_id 大于我已读位置的条数
+        $_stmtU = $_pdo->prepare("SELECT COUNT(*) FROM chat_messages WHERE chat_id = :c AND msg_id > :r");
+        $_stmtU->execute(['c' => $_chatId, 'r' => $_lastRead]);
+        $_unread = intval($_stmtU->fetchColumn());
 
-// 群聊颜色从 server_config 取
-$_groupColor = '#1a1a1a';
-if ($_isGroup) {
-    $_stmtSC = $_pdo->query("SELECT group_color FROM server_config LIMIT 1");
-    $_sc = $_stmtSC->fetch();
-    if ($_sc) {
-        $_colorData = json_decode($_sc['group_color'], true);
-        if ($_colorData) {
-            krsort($_colorData);
-            $_colorMap = [0 => '#1a1a1a', 1 => '#2563eb', 2 => '#7c3aed', 3 => '#dc2626'];
-            foreach ($_colorData as $_threshold => $_cidx) {
-                if (count($_members) >= intval($_threshold)) {
-                    $_groupColor = $_colorMap[$_cidx] ?? '#1a1a1a';
-                    break;
+        $_otherMemberName = '';
+        $_avatar = 'icon.png';
+        $_targetVip = 'none';
+
+        if (!$_isGroup) {
+            // 私聊：找对方
+            $_otherId = 0;
+            foreach ($_members as $_mid => $_mname) {
+                if (intval($_mid) !== $UserId) { $_otherId = intval($_mid); $_otherMemberName = $_mname; break; }
+            }
+            if ($_otherId) {
+                $_stmt3 = $_pdo->prepare("SELECT avatar, nickname, vip_time, svip_time FROM users WHERE user_id = :uid LIMIT 1");
+                $_stmt3->execute(['uid' => $_otherId]);
+                $_t = $_stmt3->fetch();
+                if ($_t) {
+                    $_otherMemberName = $_t['nickname'] ?: $_otherMemberName;
+                    $_avatar = $_t['avatar'] ?: 'icon.png';
+                    $_now = date('Y-m-d H:i:s');
+                    if ($_t['svip_time'] && $_t['svip_time'] > $_now) $_targetVip = 'svip';
+                    elseif ($_t['vip_time'] && $_t['vip_time'] > $_now) $_targetVip = 'vip';
+                }
+            }
+        } else {
+            $_otherMemberName = $_conv['group_name'] ?: '群聊';
+            $_avatar = $_conv['group_avatar'] ?: 'icon.png';
+        }
+
+        // 群聊颜色从 server_config 取
+        $_groupColor = '#1a1a1a';
+        if ($_isGroup) {
+            $_stmtSC = $_pdo->query("SELECT group_color FROM server_config LIMIT 1");
+            $_sc = $_stmtSC->fetch();
+            if ($_sc) {
+                $_colorData = json_decode($_sc['group_color'], true);
+                if ($_colorData) {
+                    krsort($_colorData);
+                    $_colorMap = [0 => '#1a1a1a', 1 => '#2563eb', 2 => '#7c3aed', 3 => '#dc2626'];
+                    foreach ($_colorData as $_threshold => $_cidx) {
+                        if (count($_members) >= intval($_threshold)) {
+                            $_groupColor = $_colorMap[$_cidx] ?? '#1a1a1a';
+                            break;
+                        }
+                    }
                 }
             }
         }
-    }
-}
 
-     $_result[] = [
-    'chat_id'       => $_chatId,
-    'is_group'      => $_isGroup,
-    'name'          => $_otherMemberName,
-    'avatar'        => $_avatar,
-    'last_msg'      => $_lastText,
-    'unread'        => $_unread,
-    'members_count' => count($_members),
-    'members'       => $_members , // 新增：返回成员列表
-'vip_status'  => $_targetVip,
-'group_color' => $_groupColor
-    ];
+        $_result[] = [
+            'chat_id'       => $_chatId,
+            'is_group'      => $_isGroup,
+            'name'          => $_otherMemberName,
+            'avatar'        => $_avatar,
+            'last_msg'      => $_lastText,
+            'unread'        => $_unread,
+            'members_count' => count($_members),
+            'members'       => $_members,
+            'vip_status'    => $_targetVip,
+            'group_color'   => $_groupColor
+        ];
     }
 
     echo json_encode([

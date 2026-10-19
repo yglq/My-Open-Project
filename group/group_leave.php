@@ -2,10 +2,7 @@
 /**
  * 退出/解散群聊
  * POST: UserId, ChatId
- * 
- * 群主退出 = 解散（删全部数据）
- * 成员退出 = 离开（只从自己的 chat_list 移除）
- * 剩 2 人 → 变私聊
+ * 群主或最后一人 = 解散；其他成员 = 仅自己离开
  */
 require_once __DIR__ . '/../lib/db.php';
 header('Content-Type: application/json; charset=utf-8');
@@ -22,67 +19,50 @@ try {
 
     $_pdo = GetPDO();
 
-    $_stmt = $_pdo->prepare("SELECT chat_json FROM chat_data WHERE chat_id = :cid LIMIT 1");
-    $_stmt->execute(['cid' => $ChatId]);
-    $_chat = $_stmt->fetch();
-    if (!$_chat) throw new Exception('群聊不存在');
+    $_stmt = $_pdo->prepare("SELECT owner_id, is_group FROM chat_conversations WHERE chat_id = :c LIMIT 1");
+    $_stmt->execute(['c' => $ChatId]);
+    $_conv = $_stmt->fetch();
+    if (!$_conv) throw new Exception('群聊不存在');
 
-    $_json = json_decode($_chat['chat_json'] ?? '[]', true);
-    $_members = $_json['Members'] ?? [];
-    $_memberKeys = array_keys($_members);
-    $_isOwner = ($_memberKeys[0] == $UserId);
+    $_memberIds = chatMemberIds($_pdo, $ChatId);
+    if (!in_array($UserId, $_memberIds, true)) throw new Exception('你不在该群聊中');
 
-    if ($_isOwner || count($_members) <= 1) {
-        // 解散：删 chat_data + 所有成员的 chat_list
-        $_stmt2 = $_pdo->prepare("DELETE FROM chat_data WHERE chat_id = :cid");
-        $_stmt2->execute(['cid' => $ChatId]);
+    $_isOwner = (intval($_conv['owner_id']) === $UserId);
 
-        foreach ($_members as $_mid => $_mname) {
-            $_stmt3 = $_pdo->prepare("SELECT chat_list FROM users WHERE user_id = :uid");
-            $_stmt3->execute(['uid' => intval($_mid)]);
-            $_list = json_decode($_stmt3->fetchColumn(), true) ?: [];
-            $_list = array_values(array_filter($_list, function($_item) use ($ChatId) {
-                return ($_item['chat_id'] ?? '') !== $ChatId;
-            }));
-            $_stmt4 = $_pdo->prepare("UPDATE users SET chat_list = :clist WHERE user_id = :uid");
-            $_stmt4->execute(['clist' => json_encode($_list, JSON_UNESCAPED_UNICODE), 'uid' => intval($_mid)]);
+    if ($_isOwner || count($_memberIds) <= 1) {
+        // 解散：删会话 + 成员 + 消息 + 聊天图片目录
+        $_pdo->beginTransaction();
+        try {
+            $_pdo->prepare("DELETE FROM chat_conversations WHERE chat_id = :c")->execute(['c' => $ChatId]);
+            $_pdo->prepare("DELETE FROM chat_members WHERE chat_id = :c")->execute(['c' => $ChatId]);
+            $_pdo->prepare("DELETE FROM chat_messages WHERE chat_id = :c")->execute(['c' => $ChatId]);
+            $_pdo->commit();
+        } catch (Exception $e2) {
+            if ($_pdo->inTransaction()) $_pdo->rollBack();
+            throw $e2;
         }
 
-        // 删图片文件夹
         $_imgDir = __DIR__ . '/../chat_images/' . $ChatId;
         if (is_dir($_imgDir)) {
-            array_map('unlink', glob("$_imgDir/*"));
-            rmdir($_imgDir);
+            foreach (glob($_imgDir . '/*') as $_f) @unlink($_f);
+            @rmdir($_imgDir);
         }
 
+        wsPublishToMembers($_memberIds, ['type' => 'chat_refresh', 'chat_id' => $ChatId]);
         echo json_encode(['code' => 0, 'message' => '群聊已解散'], JSON_UNESCAPED_UNICODE);
     } else {
-        // 普通成员退出
-        unset($_json['Members'][strval($UserId)]);
-        $_json['GroupMemberCount'] = count($_json['Members']);
+        $_pdo->prepare("DELETE FROM chat_members WHERE chat_id = :c AND user_id = :u")
+             ->execute(['c' => $ChatId, 'u' => $UserId]);
 
+        // 剩 2 人降级为私聊
         $_becomePrivate = false;
-        if (count($_json['Members']) == 2) {
-            unset($_json['GroupAvatar'], $_json['GroupMemberCount'], $_json['GroupName']);
+        $_remain = chatMemberIds($_pdo, $ChatId);
+        if (count($_remain) == 2 && intval($_conv['is_group'])) {
+            $_pdo->prepare("UPDATE chat_conversations SET is_group = 0 WHERE chat_id = :c")->execute(['c' => $ChatId]);
             $_becomePrivate = true;
         }
 
-        $_newJson = json_encode($_json, JSON_UNESCAPED_UNICODE);
-        $_stmt5 = $_pdo->prepare("UPDATE chat_data SET chat_json = :json WHERE chat_id = :cid");
-        $_stmt5->execute(['json' => $_newJson, 'cid' => $ChatId]);
-
-        // 从自己的 chat_list 移除
-        $_stmt6 = $_pdo->prepare("SELECT chat_list FROM users WHERE user_id = :uid");
-        $_stmt6->execute(['uid' => $UserId]);
-        $_myList = json_decode($_stmt6->fetchColumn(), true) ?: [];
-        $_myList = array_values(array_filter($_myList, function($_item) use ($ChatId) {
-            return ($_item['chat_id'] ?? '') !== $ChatId;
-        }));
-        $_stmt7 = $_pdo->prepare("UPDATE users SET chat_list = :clist WHERE user_id = :uid");
-        $_stmt7->execute(['clist' => json_encode($_myList, JSON_UNESCAPED_UNICODE), 'uid' => $UserId]);
-
-        // 实时刷新在线成员界面（静默失败）
-    wsPublishToMembers(array_map('intval', array_merge(array_map('intval', array_keys($_json['Members'])), [intval($UserId)])), ['type' => 'chat_refresh', 'chat_id' => $ChatId]);
+        wsPublishToMembers(array_merge($_remain, [$UserId]), ['type' => 'chat_refresh', 'chat_id' => $ChatId]);
 
         echo json_encode([
             'code'           => 0,
