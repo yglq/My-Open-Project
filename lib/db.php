@@ -4,15 +4,19 @@
 // 自动引入安全配置和加密/密码库
 
 require_once __DIR__ . '/config.php';
-require_once __DIR__ . '/lib/crypto.php';
-require_once __DIR__ . '/lib/password.php';
+require_once __DIR__ . '/crypto.php';
+require_once __DIR__ . '/password.php';
+require_once __DIR__ . '/http.php';
 
 // 数据库连接参数
-$Host = '127.0.0.1';     // 数据库服务器地址（本地）
-$Port = '3306';           // MySQL 默认端口
-$DbName = 'game_data';    // 数据库名
-$UserName = 'root';       // 数据库用户名
-$PassWord = '123456';     // 数据库密码
+// 优先读环境变量（生产环境务必在服务器上配置，不要把真实密码提交到仓库）：
+//   LQ_DB_HOST / LQ_DB_PORT / LQ_DB_NAME / LQ_DB_USER / LQ_DB_PASS
+// 留空时回退到本地开发默认值
+$Host     = getenv('LQ_DB_HOST') ?: '127.0.0.1';  // 数据库服务器地址
+$Port     = getenv('LQ_DB_PORT') ?: '3306';       // MySQL 端口
+$DbName   = getenv('LQ_DB_NAME') ?: 'game_data';  // 数据库名
+$UserName = getenv('LQ_DB_USER') ?: 'root';       // 数据库用户名
+$PassWord = getenv('LQ_DB_PASS') ?: '123456';     // 数据库密码（本地开发默认值）
 
 // 字符集
 $Charset = 'utf8mb4';

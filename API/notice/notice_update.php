@@ -5,16 +5,15 @@
  * 参数: ConfigId, Tokey, Content
  */
 
-require_once __DIR__ . '/../../db.php';
+require_once __DIR__ . '/../../lib/db.php';
 header('Content-Type: application/json; charset=utf-8');
 
 try {
-    // 同时支持 GET 和 POST
-    $_REQUEST = array_merge($_GET, $_POST);
+    requirePost();
 
-    $ConfigId = trim($_REQUEST['ConfigId'] ?? '');
-    $Tokey    = trim($_REQUEST['Tokey'] ?? '');
-    $Content  = trim($_REQUEST['Content'] ?? '');
+    $ConfigId = trim($_POST['ConfigId'] ?? '');
+    $Tokey    = trim($_POST['Tokey'] ?? '');
+    $Content  = trim($_POST['Content'] ?? '');
 
     if ($ConfigId === '' || $Tokey === '' || $Content === '') throw new Exception('参数错误');
 

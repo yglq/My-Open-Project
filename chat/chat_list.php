@@ -4,13 +4,12 @@
  * POST: UserId
  * 返回：对话列表，包含最后一条消息摘要和未读数
  */
-require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../lib/db.php';
 header('Content-Type: application/json; charset=utf-8');
 
 try {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        throw new Exception('请求方式错误');
-    }
+
+    requirePost();
 
     $UserId = intval($_POST['UserId'] ?? 0);
     if ($UserId <= 0) throw new Exception('参数错误');

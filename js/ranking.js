@@ -14,7 +14,7 @@ async function loadVarRanking() {
     _f.append('ConfigId', ConfigId);
     _f.append('Tokey', Tokey);
     _f.append('Page', '1'); _f.append('PageSize', '9999');
-    const _r = await fetch('sub_user/sub_users_list.php', { method: 'POST', body: _f });
+    const _r = await fetch('/sub_user/sub_users_list.php', { method: 'POST', body: _f });
     const _d = await _r.json();
     if (_d.code !== 0 || !_d.data.length) { el.innerHTML = '<div class="empty-text">暂无子用户数据</div>'; return; }
 
@@ -35,7 +35,7 @@ async function loadVarRanking() {
             _df.append('ConfigId', ConfigId);
             _df.append('Tokey', Tokey);
             _df.append('SubUserId', u.id);
-            const _dr = await fetch('sub_user/sub_user_detail.php', { method: 'POST', body: _df });
+            const _dr = await fetch('/sub_user/sub_user_detail.php', { method: 'POST', body: _df });
             const _dd = await _dr.json();
             if (_dd.code === 0) {
                 userDetails.push({ ...u, custom_vars: _dd.data.custom_vars || {} });
@@ -106,7 +106,7 @@ async function getCustomConfig() {
     _f.append('UserId', localStorage.getItem('UserId'));
     _f.append('ConfigId', ConfigId);
     _f.append('Tokey', Tokey);
-    const _r = await fetch('admin/admin_config_get.php', { method: 'POST', body: _f });
+    const _r = await fetch('/admin/admin_config_get.php', { method: 'POST', body: _f });
     const _d = await _r.json();
     return _d.code === 0 ? _d.data : null;
 }
@@ -127,7 +127,7 @@ async function setVarDetail(varName) {
         _f.append('ConfigId', ConfigId);
         _f.append('Tokey', Tokey);
         _f.append('Page', '1'); _f.append('PageSize', '9999');
-        const _r = await fetch('sub_user/sub_users_list.php', { method: 'POST', body: _f });
+        const _r = await fetch('/sub_user/sub_users_list.php', { method: 'POST', body: _f });
         const _d = await _r.json();
         if (_d.code !== 0 || !_d.data.length) { listEl.innerHTML = '<div class="empty-text">暂无数据</div>'; return; }
 
@@ -142,7 +142,7 @@ async function setVarDetail(varName) {
                 _df.append('ConfigId', ConfigId);
                 _df.append('Tokey', Tokey);
                 _df.append('SubUserId', u.id);
-                const _dr = await fetch('sub_user/sub_user_detail.php', { method: 'POST', body: _df });
+                const _dr = await fetch('/sub_user/sub_user_detail.php', { method: 'POST', body: _df });
                 const _dd = await _dr.json();
                 if (_dd.code === 0) {
                     userDetails.push({
@@ -161,7 +161,7 @@ async function setVarDetail(varName) {
             const rankClass = i === 0 ? 'gold' : '';
             return `<div class="detail-row">
                 <span class="detail-rank ${rankClass}">${i + 1}</span>
-                <img src="sub_avatars/${ConfigId}/${u.avatar || 'icon.png'}" class="detail-avatar" onerror="this.src='icon.png'">
+                <img src="sub_avatars/${ConfigId}/${u.avatar || 'icon.png'}" class="detail-avatar" onerror="this.src='/images/icon.png'">
                 <div class="detail-info"><div class="detail-name">${u.username}</div><div class="detail-value">${varName}: ${u.varValue}</div></div>
             </div>`;
         }).join('');
@@ -184,7 +184,7 @@ async function setTableDetail(tableName) {
         _f.append('ConfigId', ConfigId);
         _f.append('Tokey', Tokey);
         _f.append('Page', '1'); _f.append('PageSize', '9999');
-        const _r = await fetch('sub_user/sub_users_list.php', { method: 'POST', body: _f });
+        const _r = await fetch('/sub_user/sub_users_list.php', { method: 'POST', body: _f });
         const _d = await _r.json();
         if (_d.code !== 0 || !_d.data.length) { listEl.innerHTML = '<div class="empty-text">暂无数据</div>'; return; }
 
@@ -201,7 +201,7 @@ async function setTableDetail(tableName) {
                 _df.append('ConfigId', ConfigId);
                 _df.append('Tokey', Tokey);
                 _df.append('SubUserId', u.id);
-                const _dr = await fetch('sub_user/sub_user_detail.php', { method: 'POST', body: _df });
+                const _dr = await fetch('/sub_user/sub_user_detail.php', { method: 'POST', body: _df });
                 const _dd = await _dr.json();
                 
                 let tableData = [];
@@ -221,7 +221,7 @@ async function setTableDetail(tableName) {
                 html += `<div class="detail-row" style="flex-direction:column;align-items:flex-start;">
                     <div style="display:flex;align-items:center;gap:8px;width:100%;">
                         <span class="detail-rank">${i + 1}</span>
-                        <img src="sub_avatars/${ConfigId}/${u.avatar || 'icon.png'}" class="detail-avatar" onerror="this.src='icon.png'">
+                        <img src="sub_avatars/${ConfigId}/${u.avatar || 'icon.png'}" class="detail-avatar" onerror="this.src='/images/icon.png'">
                         <div class="detail-info">
                             <div class="detail-name">${u.username}</div>
                             <div class="detail-value">${tableName}: ${rowCount} 行数据</div>

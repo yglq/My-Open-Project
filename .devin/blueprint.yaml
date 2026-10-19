@@ -1,0 +1,15 @@
+# Devin environment blueprint for LQ Cloud Console
+initialize: |
+  # PHP + MariaDB + PDO，可起 php -S 本地冒烟测试；真实库结构见 mysql_config/MYSQL.zip
+  sudo apt-get update && sudo apt-get install -y php-cli php-mysql php-mbstring php-gd mariadb-server
+maintenance: |
+  # 无依赖管理器；无需安装步骤
+knowledge:
+  - name: lint
+    contents: |
+      php -l <file>  # 无项目 linter，逐文件语法检查
+  - name: startup
+    contents: |
+      # 初始化库: sudo mysql -e "CREATE DATABASE game_data/user_data/card_data CHARACTER SET utf8mb4;"
+      # 导入结构: unzip mysql_config/MYSQL.zip 后按库名导入对应 .sql（需 sed 's/utf8mb4_0900_ai_ci/utf8mb4_general_ci/g'）
+      # 起服务: LQ_DB_USER=<u> LQ_DB_PASS=<p> php -S 127.0.0.1:8898

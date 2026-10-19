@@ -5,10 +5,12 @@
  * 返回: {code:0} 或 {code:1}
  */
 
-require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../lib/db.php';
 header('Content-Type: application/json; charset=utf-8');
 
 try {
+    requirePost();
+
     $UserId = intval($_POST['UserId'] ?? 0);
     $Password = $_POST['Password'] ?? '';
 

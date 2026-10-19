@@ -4,13 +4,12 @@
  * POST: UserId
  * 返回：好友列表 [{user_id, nickname, avatar, chat_id}]
  */
-require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../lib/db.php';
 header('Content-Type: application/json; charset=utf-8');
 
 try {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        throw new Exception('请求方式错误');
-    }
+
+    requirePost();
 
     $UserId = intval($_POST['UserId'] ?? 0);
     if ($UserId <= 0) throw new Exception('参数错误');

@@ -149,7 +149,7 @@
         const PingEl = document.getElementById('PingText');
         const Start = Date.now();
         try {
-            await fetch('ping.php', { method: 'HEAD', cache: 'no-cache' });
+            await fetch('/index.html', { method: 'HEAD', cache: 'no-cache' });
             const Ms = Date.now() - Start;
             PingEl.textContent = Ms + 'ms';
             PingEl.style.color = Ms < 100 ? '#4caf50' : Ms < 300 ? '#ff9800' : '#f44336';

@@ -7,7 +7,7 @@
  * 自定义变量名: 直接传变量名
  */
 
-require_once __DIR__ . '/../../db.php';
+require_once __DIR__ . '/../../lib/db.php';
 header('Content-Type: application/json; charset=utf-8');
 
 try {

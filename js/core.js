@@ -5,7 +5,7 @@
 
     if (!UserId || !Password) {
         localStorage.clear();
-        window.location.href = 'Login.html';
+        window.location.href = '/pages/Login.html';
         return;
     }
 
@@ -14,7 +14,7 @@
         _formData.append('UserId', UserId);
         _formData.append('Password', Password);
 
-        const _res = await fetch('user/check_login.php', {
+        const _res = await fetch('/user/check_login.php', {
             method: 'POST',
             body: _formData
         });
@@ -22,7 +22,7 @@
 
         if (_data.code !== 0) {
             localStorage.clear();
-            window.location.href = 'Login.html';
+            window.location.href = '/pages/Login.html';
         }
     } catch (_err) {
         // 网络错误不踢，允许离线使用
@@ -49,7 +49,7 @@
         pageContainer.innerHTML = '<div class="loading-spinner"></div>';
 
         try {
-            const response = await fetch(pageFileMap[pageName]);
+            const response = await fetch('pages/' + pageFileMap[pageName]);
             if (!response.ok) throw new Error('Page not found');
             const html = await response.text();
             pageCache[pageName] = html;
@@ -79,7 +79,7 @@
     pageContainer.innerHTML = '<div class="loading-spinner"></div>';
 
     try {
-        const response = await fetch(pageName);
+        const response = await fetch('pages/' + pageName);
         if (!response.ok) throw new Error('Page not found');
         const html = await response.text();
         subPageCache[pageName] = html;

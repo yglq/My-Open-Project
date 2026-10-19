@@ -13,7 +13,7 @@
  *   6. 写两张兑换日志（子用户 redeem_log + admin_config.redeem_log）
  */
 
-require_once __DIR__ . '/../../db.php';
+require_once __DIR__ . '/../../lib/db.php';
 header('Content-Type: application/json; charset=utf-8');
 
 // 解析 custom_vars 为 name => type 映射（兼容新旧格式）
@@ -31,7 +31,8 @@ function _parseVarTypes($jsonStr) {
 }
 
 try {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception('仅支持 POST 请求');
+
+    requirePost();
 
     $ConfigId = trim($_POST['ConfigId'] ?? '');
     $ApiToken = trim($_POST['ApiToken'] ?? '');

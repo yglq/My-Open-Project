@@ -3,7 +3,7 @@
     function doLogout() {
         if (confirm('确定要退出登录吗？')) {
         localStorage.clear();  // 全部清除，包括 Password
-            window.location.href = 'Login.html';
+            window.location.href = '/pages/Login.html';
         }
     }
 
@@ -26,7 +26,7 @@
             const _formData = new FormData();
             _formData.append('UserId', UserId);
 
-            const _response = await fetch('user/user_info.php', {
+            const _response = await fetch('/user/user_info.php', {
                 method: 'POST',
                 body: _formData
             });
@@ -135,7 +135,7 @@ setTimeout(() => {
         _formData.append('Nickname', NewNickname);
 
         try {
-            const _res = await fetch('user/update_nickname.php', { method: 'POST', body: _formData });
+            const _res = await fetch('/user/update_nickname.php', { method: 'POST', body: _formData });
             const _data = await _res.json();
 
             if (_data.code === 0) {
@@ -190,7 +190,7 @@ setTimeout(() => {
         _formData.append('NewPassword', NewPassword);
 
         try {
-            const _res = await fetch('user/update_password.php', { method: 'POST', body: _formData });
+            const _res = await fetch('/user/update_password.php', { method: 'POST', body: _formData });
             const _data = await _res.json();
 
             if (_data.code === 0) {
