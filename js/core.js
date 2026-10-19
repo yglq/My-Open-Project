@@ -51,7 +51,7 @@
         pageContainer.innerHTML = '<div class="loading-spinner"></div>';
 
         try {
-            const response = await fetch('pages/' + pageFileMap[pageName]);
+            const response = await fetch('pages/' + pageFileMap[pageName] + '?v=' + window.SITE_VERSION);
             if (!response.ok) throw new Error('Page not found');
             const html = await response.text();
             pageCache[pageName] = html;
@@ -81,7 +81,7 @@
     pageContainer.innerHTML = '<div class="loading-spinner"></div>';
 
     try {
-        const response = await fetch('pages/' + pageName);
+        const response = await fetch('pages/' + pageName + '?v=' + window.SITE_VERSION);
         if (!response.ok) throw new Error('Page not found');
         const html = await response.text();
         subPageCache[pageName] = html;
