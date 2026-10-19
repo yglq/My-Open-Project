@@ -34,14 +34,14 @@ async function loadMsgList() {
     try {
         const _formData = new FormData();
         _formData.append('UserId', UserId);
-        const _res = await fetch('chat/chat_list.php', { method: 'POST', body: _formData });
+        const _res = await fetch('/chat/chat_list.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
 
         if (_data.code === 0 && _data.data.length > 0) {
   ListEl.innerHTML = _data.data.map(_item => `
     <div class="msg-item" onclick="parent.openChat('${_item.chat_id}')">
                  <img src="${_item.is_group ? 'group_avatars/' + _item.avatar : 'avatars/' + _item.avatar}" 
-                         class="msg-avatar" onerror="this.src='icon.png'">
+                         class="msg-avatar" onerror="this.src='/images/icon.png'">
                     <div class="msg-info">
                         <div class="msg-name">${_item.name}</div>
                         <div class="msg-text">${_item.last_msg || '暂无消息'}</div>
@@ -80,7 +80,7 @@ async function openChatDetail(chatId) {
     _formData.append('Limit', String(ChatLimit));
 
     try {
-        const _res = await fetch('chat/chat_detail.php', { method: 'POST', body: _formData });
+        const _res = await fetch('/chat/chat_detail.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
 
         if (_data.code === 0) {
@@ -99,7 +99,7 @@ let ServerConfig = null;
 async function loadServerConfig() {
     if (ServerConfig) return ServerConfig;
     try {
-        const _res = await fetch('admin/server_config_get.php');
+        const _res = await fetch('/admin/server_config_get.php');
         const _data = await _res.json();
         if (_data.code === 0) ServerConfig = _data.data;
         return ServerConfig;
@@ -190,7 +190,7 @@ function renderMessages(messages, readList, isGroup) {
         const isMine = parseInt(msg.SenderId) === UserId;
         const MsgId = msg.MsgId;
         const senderName = Members[msg.SenderId] || '已退出用户';
-        const senderAvatar = senderName === '已退出用户' ? 'icon.png' : (MemberAvatars[msg.SenderId] || 'icon.png');
+        const senderAvatar = senderName === '已退出用户' ? '/images/icon.png' : (MemberAvatars[msg.SenderId] || '/images/icon.png');
         const rowClass = isMine ? 'msg-row mine' : 'msg-row';
         const Time = formatTime(msg.Time || '');
 // 发送人名字颜色：VIP/SVIP
@@ -238,7 +238,7 @@ else if (_vip === 'vip') senderColor = '#d4a017';
                 const isAlreadyIn = ChatData.MyTables && ChatData.MyTables.includes(msg.ConfigId || '');
                 body = `
                     <div class="msg-studio">
-                        <img src="icon.png" class="msg-studio-avatar" onerror="this.src='icon.png'">
+                        <img src="icon.png" class="msg-studio-avatar" onerror="this.src='/images/icon.png'">
                         <div class="msg-studio-info">
                             <span class="msg-studio-name">${escapeHtml(msg.StudioName || '')}</span>
                             <span class="msg-studio-id">${escapeHtml(msg.ConfigId || '')}</span>
@@ -250,7 +250,7 @@ else if (_vip === 'vip') senderColor = '#d4a017';
 
         return `
             <div class="${rowClass}">
-                <img src="avatars/${senderAvatar}" class="msg-avatar" onerror="this.src='icon.png'">
+                <img src="avatars/${senderAvatar}" class="msg-avatar" onerror="this.src='/images/icon.png'">
                 <div>
                     <div class="msg-bubble">
            ${!isMine ? `<div style="font-size:11px;font-weight:600;color:${senderColor};margin-bottom:3px;">${senderName}</div>` : ''}  
@@ -306,7 +306,7 @@ async function parentSendMsg(type, extraData) {
     }
 
     try {
-        const _res = await fetch('chat/chat_send.php', { method: 'POST', body: _formData });
+        const _res = await fetch('/chat/chat_send.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
         if (_data.code === 0) {
             CurrentOffset = 0;
@@ -351,7 +351,7 @@ async function handleImageSend(event) {
     _formData.append('Image', _file);
 
     try {
-        const _res = await fetch('chat/chat_send.php', { method: 'POST', body: _formData });
+        const _res = await fetch('/chat/chat_send.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
         if (_data.code === 0) {
             CurrentOffset = 0;
@@ -388,7 +388,7 @@ async function inviteStudioMenu() {
     _formData.append('UserId', UserId);
 
     try {
-        const _res = await fetch('database/user_databases.php', { method: 'POST', body: _formData });
+        const _res = await fetch('/database/user_databases.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
 
         if (_data.code === 0 && _data.data.length > 0) {
@@ -450,7 +450,7 @@ async function acceptCoin(msgId, type, num) {
     _formData.append('MsgId', msgId);
 
     try {
-        const _res = await fetch('admin/coin_accept.php', { method: 'POST', body: _formData });
+        const _res = await fetch('/admin/coin_accept.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
         if (_data.code === 0) {
             alert(`成功获得 ${_data.num} 金币！`);
@@ -476,7 +476,7 @@ async function acceptStudio(configId, msgId, chatId) {
     _formData.append('MsgId', msgId);
 
     try {
-        const _res = await fetch('database/studio_join.php', { method: 'POST', body: _formData });
+        const _res = await fetch('/database/studio_join.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
         if (_data.code === 0) {
             alert('加入成功！');
@@ -520,10 +520,10 @@ function showReadList(msgId) {
     _html += '<div style="font-size:16px;font-weight:700;text-align:center;margin-bottom:16px;">已读 · ' + ReadUsers.length + '人</div>';
 
     ReadUsers.forEach(uid => {
-        const u = UserList[uid] || { name: '未知', avatar: 'icon.png' };
+        const u = UserList[uid] || { name: '未知', avatar: '/images/icon.png' };
         _html += `
             <div style="display:flex;align-items:center;gap:10px;padding:10px 0;">
-                <img src="avatars/${u.avatar}" style="width:36px;height:36px;border-radius:10px;object-fit:cover;background:#e8e3d9;" onerror="this.src='icon.png'">
+                <img src="avatars/${u.avatar}" style="width:36px;height:36px;border-radius:10px;object-fit:cover;background:#e8e3d9;" onerror="this.src='/images/icon.png'">
                 <span style="font-size:14px;font-weight:500;">${u.name}</span>
             </div>`;
     });

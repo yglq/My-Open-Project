@@ -4,11 +4,12 @@
  * 仅支持 POST
  * 参数: ConfigId, Tokey, CardId
  */
-require_once __DIR__ . '/../../db.php';
+require_once __DIR__ . '/../../lib/db.php';
 header('Content-Type: application/json; charset=utf-8');
 
 try {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception('仅支持 POST 请求');
+
+    requirePost();
 
     $ConfigId = trim($_POST['ConfigId'] ?? '');
     $Tokey    = trim($_POST['Tokey'] ?? '');

@@ -3,11 +3,12 @@
  * 卡密列表（分页）
  * POST: UserId, ConfigId, Tokey, Page(默认1), PageSize(默认20), Type(可选筛选)
  */
-require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../lib/db.php';
 header('Content-Type: application/json; charset=utf-8');
 
 try {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception('请求方式错误');
+
+    requirePost();
 
     $UserId   = intval($_POST['UserId'] ?? 0);
     $ConfigId = trim($_POST['ConfigId'] ?? '');

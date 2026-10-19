@@ -4,13 +4,12 @@
  * POST: UserId, TargetUserId
  * 如果已存在则返回已有的 chat_id
  */
-require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../lib/db.php';
 header('Content-Type: application/json; charset=utf-8');
 
 try {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        throw new Exception('请求方式错误');
-    }
+
+    requirePost();
 
     $UserId       = intval($_POST['UserId'] ?? 0);
     $TargetUserId = intval($_POST['TargetUserId'] ?? 0);

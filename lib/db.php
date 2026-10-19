@@ -4,8 +4,9 @@
 // 自动引入安全配置和加密/密码库
 
 require_once __DIR__ . '/config.php';
-require_once __DIR__ . '/lib/crypto.php';
-require_once __DIR__ . '/lib/password.php';
+require_once __DIR__ . '/crypto.php';
+require_once __DIR__ . '/password.php';
+require_once __DIR__ . '/http.php';
 
 // 数据库连接参数
 // 优先读环境变量（生产环境务必在服务器上配置，不要把真实密码提交到仓库）：

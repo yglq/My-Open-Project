@@ -5,15 +5,14 @@
  * 返回 JSON：{"code":0, "message":"ok", "userId":1, "userName":"xxx"}
  */
 
-require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../lib/db.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
 // ========== 主逻辑 ==========
 try {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        throw new Exception('请求方式错误');
-    }
+
+    requirePost();
 
     $_pdo = GetPDO();
 

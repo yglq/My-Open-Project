@@ -1,9 +1,10 @@
 <?php
-require_once __DIR__ . '/../../db.php';
+require_once __DIR__ . '/../../lib/db.php';
 header('Content-Type: application/json; charset=utf-8');
 
 try {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception('仅支持 POST 请求');
+
+    requirePost();
 
     $ConfigId = trim($_POST['ConfigId'] ?? '');
     $ApiToken = trim($_POST['ApiToken'] ?? '');
@@ -38,17 +39,17 @@ try {
         throw new Exception("密码长度需在 {$_pwdMin}~{$_pwdMax} 之间");
     }
 
-    $_regIp = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
-    $_ipLimit = intval($_config['ip_register_limit'] ?? 10);
-    $_stmtIp = $_pdo->prepare("SELECT COUNT(*) FROM `user_data`.`$ConfigId` WHERE reg_ip = :ip");
-    $_stmtIp->execute(['ip' => $_regIp]);
-    if ($_stmtIp->fetchColumn() >= $_ipLimit) throw new Exception('该 IP 注册次数已达上限');
-
     $_stmt2 = $_pdo->prepare("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'user_data' AND table_name = :t");
     $_stmt2->execute(['t' => $ConfigId]);
     if ($_stmt2->fetchColumn() == 0) {
         createSubUserTable($ConfigId);
     }
+
+    $_regIp = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    $_ipLimit = intval($_config['ip_register_limit'] ?? 10);
+    $_stmtIp = $_pdo->prepare("SELECT COUNT(*) FROM `user_data`.`$ConfigId` WHERE reg_ip = :ip");
+    $_stmtIp->execute(['ip' => $_regIp]);
+    if ($_stmtIp->fetchColumn() >= $_ipLimit) throw new Exception('该 IP 注册次数已达上限');
 
     $_stmt3 = $_pdo->prepare("SELECT COUNT(*) FROM `user_data`.`$ConfigId` WHERE username = :uname");
     $_stmt3->execute(['uname' => $Username]);

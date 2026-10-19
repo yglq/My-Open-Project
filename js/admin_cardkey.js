@@ -33,7 +33,7 @@ async function loadCards(page, append) {
     if (ckActiveType !== 'all') f.append('Type', ckActiveType);
 
     try {
-        var r = await fetch('cardkey/list.php', { method: 'POST', body: f });
+        var r = await fetch('/cardkey/list.php', { method: 'POST', body: f });
         var d = await r.json();
         if (d.code === 0) {
             ckHasMore = d.list.length >= d.pageSize;
@@ -110,7 +110,7 @@ async function doDeleteCard(cardId) {
     f.append('Tokey', auth.Tokey);
     f.append('CardId', cardId);
     try {
-        var r = await fetch('cardkey/delete.php', { method: 'POST', body: f });
+        var r = await fetch('/cardkey/delete.php', { method: 'POST', body: f });
         var d = await r.json();
         if (d.code === 0) {
             ckPage = 1; ckHasMore = true;
@@ -286,7 +286,7 @@ async function doGenerateGold() {
     f.append('Type', 1);
     f.append('Gold', gold);
     try {
-        var r = await fetch('cardkey/generate.php', { method: 'POST', body: f });
+        var r = await fetch('/cardkey/generate.php', { method: 'POST', body: f });
         var d = await r.json();
         if (d.code === 0) {
             document.getElementById('generateOverlay').classList.remove('show');
@@ -308,7 +308,7 @@ async function doGenerateVip() {
     f.append('Type', 2);
     f.append('VipDays', vipDays);
     try {
-        var r = await fetch('cardkey/generate.php', { method: 'POST', body: f });
+        var r = await fetch('/cardkey/generate.php', { method: 'POST', body: f });
         var d = await r.json();
         if (d.code === 0) {
             document.getElementById('generateOverlay').classList.remove('show');
@@ -363,7 +363,7 @@ async function doGenerateCustom() {
         f.append('JsonList', JSON.stringify(rewards));
     }
     try {
-        var r = await fetch('cardkey/generate.php', { method: 'POST', body: f });
+        var r = await fetch('/cardkey/generate.php', { method: 'POST', body: f });
         var d = await r.json();
         if (d.code === 0) {
             document.getElementById('generateOverlay').classList.remove('show');

@@ -4,13 +4,12 @@
  * POST: UserId, GroupName, Members (JSON数组 [2, 3, 5])
  * POST: GroupAvatar (文件可选)
  */
-require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../lib/db.php';
 header('Content-Type: application/json; charset=utf-8');
 
 try {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        throw new Exception('请求方式错误');
-    }
+
+    requirePost();
 
     $UserId    = intval($_POST['UserId'] ?? 0);
     $GroupName = trim($_POST['GroupName'] ?? '');
