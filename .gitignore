@@ -1,0 +1,14 @@
+# 本机/部署环境特有的文件，含服务器路径等敏感信息，不要提交
+.user.ini
+openCode.sh
+
+# 运行时上传目录（用户头像、聊天图片等）
+/avatars/
+/sub_avatars/
+/chat_images/
+/group_avatars/
+
+# 系统/编辑器杂项
+.DS_Store
+Thumbs.db
+*.log

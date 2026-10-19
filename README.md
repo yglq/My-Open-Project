@@ -350,20 +350,21 @@ $CONFIG = [
 ## 🚀 数据重置命令
 
 ```bash
-# 一键清空所有数据
-mysql -u root -p'123456' -h 127.0.0.1 -e "
+# 一键清空所有数据（密码通过环境变量传入，不要写死在命令行里）
+export MYSQL_PWD="$LQ_DB_PASS"
+mysql -u root -h 127.0.0.1 -e "
   USE game_data;
   TRUNCATE TABLE users;
   TRUNCATE TABLE data_tables_registry;
   TRUNCATE TABLE admin_config;
   TRUNCATE TABLE chat_data;
-" && mysql -u root -p'123456' -h 127.0.0.1 -N -e "
+" && mysql -u root -h 127.0.0.1 -N -e "
   SELECT CONCAT('DROP TABLE IF EXISTS user_data.\`', table_name, '\`;')
   FROM information_schema.tables WHERE table_schema='user_data'
-" | mysql -u root -p'123456' -h 127.0.0.1 && mysql -u root -p'123456' -h 127.0.0.1 -N -e "
+" | mysql -u root -h 127.0.0.1 && mysql -u root -h 127.0.0.1 -N -e "
   SELECT CONCAT('DROP TABLE IF EXISTS card_data.\`', table_name, '\`;')
   FROM information_schema.tables WHERE table_schema='card_data'
-" | mysql -u root -p'123456' -h 127.0.0.1 && rm -rf avatars/* sub_avatars/* chat_images/* && echo "全部清空完成"
+" | mysql -u root -h 127.0.0.1 && rm -rf avatars/* sub_avatars/* chat_images/* && echo "全部清空完成"
 ```
 
 ---
