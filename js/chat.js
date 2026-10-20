@@ -274,7 +274,7 @@ else if (_vip === 'vip') senderColor = '#d4a017';
         return `
             <div class="${rowClass}">
                 <img src="avatars/${senderAvatar}" class="msg-avatar" onerror="this.src='/images/icon.png'">
-                <div>
+                <div class="msg-col">
                     <div class="msg-bubble">
            ${!isMine ? `<div style="font-size:11px;font-weight:600;color:${senderColor};margin-bottom:3px;">${senderName}</div>` : ''}  
                         ${body}

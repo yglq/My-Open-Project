@@ -29,6 +29,7 @@ var LqWS = (function () {
         ws.onopen = function () {
             retryMs = 1000;
             startHeartbeat();
+            resync(); // 重连成功：拉取断线期间漏掉的消息
         };
         ws.onmessage = function (e) {
             var d;
@@ -60,6 +61,17 @@ var LqWS = (function () {
         if (hbTimer) { clearInterval(hbTimer); hbTimer = null; }
     }
 
+    // 断线补偿：直接从服务端拉最新数据，补回漏掉的推送
+    function resync() {
+        if (typeof refreshCurrentChat === 'function' && document.getElementById('ChatMessages')
+            && typeof CurrentChatId !== 'undefined' && CurrentChatId) {
+            refreshCurrentChat();
+        }
+        if (typeof loadMsgList === 'function' && document.getElementById('MsgList')) {
+            loadMsgList();
+        }
+    }
+
     // 事件分发：当前打开的聊天 → 刷新消息区；否则刷新会话列表
     function dispatch(d) {
         if (!d || typeof d !== 'object') return;
@@ -75,11 +87,14 @@ var LqWS = (function () {
         }
     }
 
-    // 切回前台时如果连接断了立即重连
+    // 切回前台：连接活着也要补拉一次（后台时推送可能已丢），断了就重连
     document.addEventListener('visibilitychange', function () {
-        if (!document.hidden && (!ws || ws.readyState === 3)) {
+        if (document.hidden) return;
+        if (!ws || ws.readyState === 3 || ws.readyState === 2) {
             retryMs = 1000;
             connect();
+        } else {
+            resync();
         }
     });
 

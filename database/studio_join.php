@@ -58,13 +58,19 @@ try {
 
     if (!$_reg) throw new Exception('工作室不存在');
 
-    // 从 table_data JSON 中取 tokey（仅服务端内部使用，不对外暴露）
+    // 从独立凭证表取 tokey（仅服务端内部使用，不对外暴露）；回退 JSON
     $_actualTokey = '';
-    $_regData = json_decode($_reg['table_data'], true) ?: [];
-    foreach ($_regData as $_item) {
-        if (($_item['table'] ?? '') === $ConfigId) {
-            $_actualTokey = $_item['tokey'] ?? '';
-            break;
+    $_stmtK = $_pdo->prepare("SELECT tokey FROM db_credentials WHERE config_id = :cid LIMIT 1");
+    $_stmtK->execute(['cid' => $ConfigId]);
+    $_tkRow = $_stmtK->fetchColumn();
+    if ($_tkRow !== false) {
+        $_actualTokey = $_tkRow;
+    } else {
+        foreach ((json_decode($_reg['table_data'], true) ?: []) as $_item) {
+            if (($_item['table'] ?? '') === $ConfigId) {
+                $_actualTokey = $_item['tokey'] ?? '';
+                break;
+            }
         }
     }
 

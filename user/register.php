@@ -119,11 +119,12 @@ try {
         ]
     ], JSON_UNESCAPED_UNICODE);
 
+    $_defTokey = randomString(21, 'table');
     $_jsonData = json_encode([
         [
             'table' => $_dataTable,
             'name'  => '默认数据库',
-            'tokey' => randomString(21, 'table')
+            'tokey' => $_defTokey
         ]
     ], JSON_UNESCAPED_UNICODE);
 
@@ -133,6 +134,10 @@ try {
         'tdata' => $_jsonData,
         'rec'   => $_record,
     ]);
+
+    // Tokey 独立凭证表
+    $_pdo->prepare("INSERT IGNORE INTO db_credentials (config_id,tokey,owner_id,created_at) VALUES (?,?,?,NOW())")
+         ->execute([$_dataTable, $_defTokey, $_newUserId]);
 
     // ---------- 创建 admin_config + studio_members ----------
     $_apiToken = randomString(21, 'table');

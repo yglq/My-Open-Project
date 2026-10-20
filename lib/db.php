@@ -85,21 +85,42 @@ function validateApiToken($ConfigId, $ApiToken) {
 }
 
 // 验证 Tokey：用于后台管理接口（级别 3）
-// UserId: 主用户 ID
-// ConfigId: 数据库标识
-// Tokey: 数据库密钥
+// UserId: 主用户 ID；ConfigId: 数据库标识；Tokey: 该库的独立密钥
+// 密钥本体存 db_credentials 表（O(1) 索引查找），registry JSON 只判断用户是否是该库成员
 function validateTokey($UserId, $ConfigId, $Tokey) {
     if (!preg_match('/^[A-Za-z0-9_]{1,64}$/', (string)$ConfigId)) throw new Exception('ConfigId 非法');
     $_pdo = GetPDO();
-    $_stmt = $_pdo->prepare("SELECT table_data FROM data_tables_registry WHERE user_id = :uid");
-    $_stmt->execute(['uid' => $UserId]);
-    $_data = json_decode($_stmt->fetchColumn(), true) ?: [];
-    foreach ($_data as $_item) {
-        if (($_item['table'] ?? '') === $ConfigId && ($_item['tokey'] ?? '') === $Tokey) {
-            return;
+    if (!dbTokeyMatch($_pdo, $ConfigId, $Tokey)) throw new Exception('Tokey 验证失败');
+    // 成员身份：该用户的 registry 里必须挂着这个库
+    $_stmt = $_pdo->prepare(
+        "SELECT 1 FROM data_tables_registry WHERE user_id = :uid
+         AND JSON_SEARCH(table_data, 'one', :cid, NULL, '$[*].table') IS NOT NULL LIMIT 1"
+    );
+    $_stmt->execute(['uid' => $UserId, 'cid' => $ConfigId]);
+    if (!$_stmt->fetchColumn()) throw new Exception('Tokey 验证失败');
+}
+
+// Tokey 比对：查 db_credentials；查不到记录时回退 registry JSON（迁移前兼容）
+function dbTokeyMatch(PDO $_pdo, $ConfigId, $Tokey) {
+    $_stmt = $_pdo->prepare("SELECT tokey FROM db_credentials WHERE config_id = :cid LIMIT 1");
+    $_stmt->execute(['cid' => $ConfigId]);
+    $_real = $_stmt->fetchColumn();
+    if ($_real !== false) {
+        return hash_equals((string)$_real, (string)$Tokey);
+    }
+    $_stmt2 = $_pdo->prepare(
+        "SELECT table_data FROM data_tables_registry
+         WHERE JSON_SEARCH(table_data, 'one', :cid, NULL, '$[*].table') IS NOT NULL"
+    );
+    $_stmt2->execute(['cid' => $ConfigId]);
+    foreach ($_stmt2->fetchAll() as $_row) {
+        foreach ((json_decode($_row['table_data'], true) ?: []) as $_item) {
+            if (($_item['table'] ?? '') === $ConfigId && hash_equals((string)($_item['tokey'] ?? ''), (string)$Tokey)) {
+                return true;
+            }
         }
     }
-    throw new Exception('Tokey 验证失败');
+    return false;
 }
 
 // 签发主用户会话令牌（登录时调用），返回明文 token 并写库
@@ -544,18 +565,5 @@ if (!isDevMode()) {
 // 验证 Tokey（全局版）：用于无需 UserId 的场景，如 notice_update API
 function validateTokeyGlobal($ConfigId, $Tokey) {
     if (!preg_match('/^[A-Za-z0-9_]{1,64}$/', (string)$ConfigId)) throw new Exception('ConfigId 非法');
-    $_pdo = GetPDO();
-    // JSON_SEARCH 只取包含该 ConfigId 的行，不再全表解码
-    $_stmt = $_pdo->prepare("SELECT table_data FROM data_tables_registry WHERE JSON_SEARCH(table_data, 'one', :cid) IS NOT NULL");
-    $_stmt->execute(['cid' => $ConfigId]);
-    $_all = $_stmt->fetchAll();
-    foreach ($_all as $_row) {
-        $_data = json_decode($_row['table_data'], true) ?: [];
-        foreach ($_data as $_item) {
-            if (($_item['table'] ?? '') === $ConfigId && ($_item['tokey'] ?? '') === $Tokey) {
-                return;
-            }
-        }
-    }
-    throw new Exception('Tokey 验证失败');
+    if (!dbTokeyMatch(GetPDO(), $ConfigId, $Tokey)) throw new Exception('Tokey 验证失败');
 }
