@@ -1,7 +1,15 @@
 {
-  "version": "1.4.1",
+  "version": "1.5.0",
   "updated": "2026-10-20",
   "log": [
+    {
+      "version": "1.5.0",
+      "date": "2026-10-20",
+      "items": [
+        "新增 API /API/user/get_custom_table.php：读取子用户自定义JSON表整表数据（GET/POST）",
+        "API文档新增“获取自定义JSON表”说明页"
+      ]
+    },
     {
       "version": "1.4.1",
       "date": "2026-10-20",
