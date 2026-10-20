@@ -80,6 +80,7 @@ async function loadConfig() {
             setVal('ServerStatus', _c.server_status);
             setToggle('ApiTokenSwitch', _c.api_token_switch);
             setVal('ApiToken', _c.api_token);
+            setVal('Tokey', _c.tokey || '');
             setToggle('SubPwdHash', _c.sub_pwd_hash);
         }
     } catch (_err) {
@@ -137,6 +138,7 @@ async function saveConfig() {
     _formData.append('server_status', getVal('ServerStatus'));
     _formData.append('api_token_switch', getToggle('ApiTokenSwitch'));
     _formData.append('api_token', getVal('ApiToken'));
+    _formData.append('tokey', getVal('Tokey'));
     _formData.append('sub_pwd_hash', getToggle('SubPwdHash'));
 
     try {

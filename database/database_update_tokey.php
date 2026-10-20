@@ -34,8 +34,8 @@ try {
     $_stmt2 = $_pdo->prepare("UPDATE data_tables_registry SET table_data = :td WHERE user_id = :uid");
     $_stmt2->execute(['td' => $_newJson, 'uid' => $UserId]);
 
-    // 同步独立凭证表（成员侧 JSON 里的 tokey 副本不再参与验证）
-    $_pdo->prepare("UPDATE db_credentials SET tokey = :tk WHERE config_id = :cid")
+    // 同步配置表 Tokey 字段（成员侧 JSON 里的副本不再参与验证）
+    $_pdo->prepare("UPDATE admin_config SET tokey = :tk WHERE config_id = :cid")
          ->execute(['tk' => $NewTokey, 'cid' => $ConfigId]);
 
     echo json_encode(['code' => 0, 'message' => '修改成功'], JSON_UNESCAPED_UNICODE);

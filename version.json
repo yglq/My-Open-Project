@@ -1,7 +1,15 @@
 {
-  "version": "1.4.0",
+  "version": "1.4.1",
   "updated": "2026-10-20",
   "log": [
+    {
+      "version": "1.4.1",
+      "date": "2026-10-20",
+      "items": [
+        "Tokey 改为 admin_config 独立字段，配置页“服务器相关”可查看/修改",
+        "原“Token验证开关”改名为“ApiTokey验证开关”"
+      ]
+    },
     {
       "version": "1.4.0",
       "date": "2026-10-20",

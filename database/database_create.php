@@ -50,16 +50,13 @@ try {
         $_stmt2 = $_pdo->prepare("INSERT INTO data_tables_registry (user_id, table_data) VALUES (:uid, :td)");
         $_stmt2->execute(['uid' => $UserId, 'td' => $_newJson]);
     }
-// Tokey 入库：独立凭证表
-$_pdo->prepare("INSERT IGNORE INTO db_credentials (config_id,tokey,owner_id,created_at) VALUES (?,?,?,NOW())")
-     ->execute([$_newTable, $NewTokey, $UserId]);
-
-// 创建对应的 admin_config 记录
-$_stmt3 = $_pdo->prepare("INSERT INTO admin_config (config_id, user_id, api_token) VALUES (:cid, :uid, :token)");
+// 创建对应的 admin_config 记录（Tokey 存配置表 tokey 字段）
+$_stmt3 = $_pdo->prepare("INSERT INTO admin_config (config_id, user_id, api_token, tokey) VALUES (:cid, :uid, :token, :tk)");
 $_stmt3->execute([
     'cid'   => $_newTable,
     'uid'   => $UserId,
-    'token' => randomString(21)
+    'token' => randomString(21),
+    'tk'    => $NewTokey
 ]);
 // 初始化 studio_members
 $_stmtM = $_pdo->prepare("UPDATE admin_config SET studio_members = :sm WHERE config_id = :cid");

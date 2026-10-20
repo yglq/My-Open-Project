@@ -100,12 +100,12 @@ function validateTokey($UserId, $ConfigId, $Tokey) {
     if (!$_stmt->fetchColumn()) throw new Exception('Tokey 验证失败');
 }
 
-// Tokey 比对：查 db_credentials；查不到记录时回退 registry JSON（迁移前兼容）
+// Tokey 比对：查 admin_config.tokey（配置页可查看/修改）；查不到时回退 registry JSON（迁移前兼容）
 function dbTokeyMatch(PDO $_pdo, $ConfigId, $Tokey) {
-    $_stmt = $_pdo->prepare("SELECT tokey FROM db_credentials WHERE config_id = :cid LIMIT 1");
+    $_stmt = $_pdo->prepare("SELECT tokey FROM admin_config WHERE config_id = :cid LIMIT 1");
     $_stmt->execute(['cid' => $ConfigId]);
     $_real = $_stmt->fetchColumn();
-    if ($_real !== false) {
+    if ($_real !== false && $_real !== null && $_real !== '') {
         return hash_equals((string)$_real, (string)$Tokey);
     }
     $_stmt2 = $_pdo->prepare(

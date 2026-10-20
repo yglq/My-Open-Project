@@ -14,14 +14,13 @@ try {
 
     $_pdo = GetPDO();
 
-    // 查询所有 registry，遍历 table_data 找到匹配的项
-    // Tokey 独立凭证表直查（不再全表扫 JSON）
-    $_stmtC = $_pdo->prepare("SELECT owner_id, tokey FROM db_credentials WHERE config_id = :cid LIMIT 1");
+    // Tokey 从 admin_config.tokey 直查（不再全表扫 JSON）
+    $_stmtC = $_pdo->prepare("SELECT user_id, tokey FROM admin_config WHERE config_id = :cid LIMIT 1");
     $_stmtC->execute(['cid' => $ConfigId]);
     $_cred = $_stmtC->fetch();
 
-    if ($_cred) {
-        $_matchedOwnerId = intval($_cred['owner_id']);
+    if ($_cred && $_cred['tokey'] !== '') {
+        $_matchedOwnerId = intval($_cred['user_id']);
         $_actualTokey    = $_cred['tokey'];
         if (!hash_equals($_actualTokey, $Tokey)) throw new Exception('密钥错误');
     } else {

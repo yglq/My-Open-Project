@@ -23,7 +23,7 @@ try {
         'register_gold','register_exp','register_vip_minutes','sign_gold','sign_exp',
         'cardkey_length','cardkey_type','cardkey_api_switch','cardkey_generate_switch',
         'notice_switch','notice_api_switch','stats_switch',
-        'server_status','api_token_switch','api_token','sub_pwd_hash',
+        'server_status','api_token_switch','api_token','tokey','sub_pwd_hash',
         'custom_vars','custom_tables','custom_vars_defaults','custom_table_defaults'
     ];
 

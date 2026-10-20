@@ -135,11 +135,7 @@ try {
         'rec'   => $_record,
     ]);
 
-    // Tokey 独立凭证表
-    $_pdo->prepare("INSERT IGNORE INTO db_credentials (config_id,tokey,owner_id,created_at) VALUES (?,?,?,NOW())")
-         ->execute([$_dataTable, $_defTokey, $_newUserId]);
-
-    // ---------- 创建 admin_config + studio_members ----------
+    // ---------- 创建 admin_config + studio_members（Tokey 存配置表 tokey 字段） ----------
     $_apiToken = randomString(21, 'table');
     $_initMembers = json_encode([[
         'user_id'   => $_newUserId,
@@ -149,11 +145,12 @@ try {
         'joined_at' => date('Y-m-d-H-i-s')
     ]], JSON_UNESCAPED_UNICODE);
 
-    $_stmtA = $_pdo->prepare("INSERT INTO admin_config (config_id, user_id, api_token, studio_members) VALUES (:cid, :uid, :token, :sm)");
+    $_stmtA = $_pdo->prepare("INSERT INTO admin_config (config_id, user_id, api_token, tokey, studio_members) VALUES (:cid, :uid, :token, :tk, :sm)");
     $_stmtA->execute([
         'cid'   => $_dataTable,
         'uid'   => $_newUserId,
         'token' => $_apiToken,
+        'tk'    => $_defTokey,
         'sm'    => $_initMembers
     ]);
 
