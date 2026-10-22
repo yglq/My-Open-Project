@@ -80,7 +80,7 @@ function loadTableRanking() {
             <div class="table-detail" id="tableDetail_${name}" style="display:none; margin-top:8px; padding: 8px; background:#faf7f2; border-radius: 8px; font-size: 12px;">
                 ${(tables[name] || []).length > 0 ? 
                     `<div class="card-title" style="font-size:12px;">列定义</div>
-                    ${tables[name].map(col => `<div class="empty-text" style="margin-left:12px;">• ${col}</div>`).join('')}
+                    ${tables[name].map(col => `<div class="empty-text" style="margin-left:12px;">• ${escapeHtml(col)}</div>`).join('')}
                     <div class="card-title" style="font-size:12px; margin-top:8px;">数据预览</div>
                     <div class="empty-text">点击"更多"查看完整数据</div>
                     <span class="rank-more" onclick="parent.loadSubPage('Home_Admin_Custom_Ranking_TableDetail.html');parent.setTableDetail('${name}')" style="font-size:11px;">更多 ›</span>`
@@ -214,7 +214,7 @@ async function setTableDetail(tableName) {
                 if (rowCount > 0) {
                     rowsHtml = tableData.map((row, ri) => `
                         <div style="margin-left:16px;font-size:11px;color:#8b7355;">
-                            行${ri + 1}: ${cols.map(c => `${c}=${row[c] || '-'}`).join(', ')}
+                            行${ri + 1}: ${escapeHtml(cols.map(c => `${c}=${row[c] || '-'}`).join(', '))}
                         </div>`).join('');
                 }
                 

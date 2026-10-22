@@ -57,9 +57,9 @@ async function doSearchUser() {
             _result.innerHTML = _data.data.map(u => `
                 <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;cursor:pointer;background:#faf7f2;"
                      onclick="createAndOpenChat(${u.user_id})">
-                    <img src="avatars/${u.avatar}" style="width:44px;height:44px;border-radius:12px;object-fit:cover;background:#e8e3d9;" onerror="this.src='/images/icon.png'">
+                    <img src="avatars/${escapeHtml(u.avatar||'')}" style="width:44px;height:44px;border-radius:12px;object-fit:cover;background:#e8e3d9;" onerror="this.src='/images/icon.png'">
                     <div style="flex:1;">
-                        <div style="font-size:15px;font-weight:600;color:#1a1a1a;">${u.nickname}</div>
+                        <div style="font-size:15px;font-weight:600;color:#1a1a1a;">${escapeHtml(u.nickname||'')}</div>
                         <div style="font-size:11px;color:#b8a48c;">ID: ${u.user_id}</div>
                     </div>
                 </div>
@@ -143,8 +143,8 @@ async function showGroupCreatePopup() {
         _html += `
             <label style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;background:#faf7f2;cursor:pointer;">
                 <input type="checkbox" value="${f.user_id}" class="friend-check" onchange="updateSelectedCount()">
-                <img src="avatars/${f.avatar}" style="width:40px;height:40px;border-radius:10px;object-fit:cover;background:#e8e3d9;" onerror="this.src='/images/icon.png'">
-                <span style="font-size:14px;font-weight:500;">${f.nickname}</span>
+                <img src="avatars/${escapeHtml(f.avatar||'')}" style="width:40px;height:40px;border-radius:10px;object-fit:cover;background:#e8e3d9;" onerror="this.src='/images/icon.png'">
+                <span style="font-size:14px;font-weight:500;">${escapeHtml(f.nickname||'')}</span>
             </label>`;
     });
 
@@ -231,9 +231,9 @@ function showGroupDetailPopup(data) {
     // 群头像 + 名字
     _html += `
         <div style="display:flex;align-items:center;gap:14px;padding:16px;background:linear-gradient(135deg,#fafaf8,#f2efe9);border-radius:18px;margin-bottom:16px;">
-            <img src="group_avatars/${data.group_avatar}" style="width:60px;height:60px;border-radius:16px;object-fit:cover;background:#e8e3d9;" onerror="this.src='/images/icon.png'">
+            <img src="group_avatars/${escapeHtml(data.group_avatar||'')}" style="width:60px;height:60px;border-radius:16px;object-fit:cover;background:#e8e3d9;" onerror="this.src='/images/icon.png'">
             <div>
-                <div style="font-size:18px;font-weight:700;">${data.group_name}</div>
+                <div style="font-size:18px;font-weight:700;">${escapeHtml(data.group_name||'')}</div>
                 <div style="font-size:13px;color:#8b7355;">${data.member_count} / ${data.max_members} 人</div>
             </div>
         </div>`;
@@ -243,9 +243,9 @@ function showGroupDetailPopup(data) {
     _html += '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;max-height:240px;overflow-y:auto;margin-bottom:16px;">';
     data.members.forEach(m => {
         _html += `
-            <div style="text-align:center;cursor:pointer;padding:6px;" onclick="showMemberDetail(${m.user_id}, '${m.name}', '${m.avatar}', '${(m.bio || '').replace(/'/g, "\\'")}', ${m.is_owner}, ${data.is_owner}, '${CurrentChatId}')">
-                <img src="avatars/${m.avatar}" style="width:44px;height:44px;border-radius:12px;object-fit:cover;background:#e8e3d9;margin:0 auto;" onerror="this.src='/images/icon.png'">
-                <div style="font-size:11px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.name}${m.is_owner ? ' 👑' : ''}</div>
+            <div style="text-align:center;cursor:pointer;padding:6px;" onclick="showMemberDetail(${m.user_id}, '${(m.name||'').replace(/'/g, "\\'")}', '${(m.avatar||'').replace(/'/g, "\\'")}', '${(m.bio || '').replace(/'/g, "\\'")}', ${m.is_owner}, ${data.is_owner}, '${CurrentChatId}')">
+                <img src="avatars/${escapeHtml(m.avatar||'')}" style="width:44px;height:44px;border-radius:12px;object-fit:cover;background:#e8e3d9;margin:0 auto;" onerror="this.src='/images/icon.png'">
+                <div style="font-size:11px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(m.name||'')}${m.is_owner ? ' 👑' : ''}</div>
             </div>`;
     });
     _html += '</div>';
@@ -283,9 +283,9 @@ function showMemberDetail(userId, name, avatar, bio, isOwner, isMeOwner, chatId)
 
     let _html = '<div style="background:#fff;border-radius:20px;padding:24px;width:90%;max-width:340px;">';
     _html += `<div style="text-align:center;">
-        <img src="avatars/${avatar}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;background:#e8e3d9;margin-bottom:12px;" onerror="this.src='/images/icon.png'">
-        <div style="font-size:18px;font-weight:700;">${name}${isOwner ? ' 👑' : ''}</div>
-        <div style="font-size:13px;color:#8b7355;margin:6px 0;">${bio || '这个人很懒，什么都没写'}</div>
+        <img src="avatars/${escapeHtml(avatar||'')}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;background:#e8e3d9;margin-bottom:12px;" onerror="this.src='/images/icon.png'">
+        <div style="font-size:18px;font-weight:700;">${escapeHtml(name||'')}${isOwner ? ' 👑' : ''}</div>
+        <div style="font-size:13px;color:#8b7355;margin:6px 0;">${escapeHtml(bio || '这个人很懒，什么都没写')}</div>
         <div style="font-size:12px;color:#b8a48c;">ID: ${userId}</div>`;
 
     // 踢人按钮（群主对非群主）
@@ -319,8 +319,8 @@ function showGroupInvitePopup() {
         _html += `
             <label style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;background:#faf7f2;cursor:pointer;margin-bottom:4px;">
                 <input type="checkbox" value="${f.user_id}" class="invite-check">
-                <img src="avatars/${f.avatar}" style="width:40px;height:40px;border-radius:10px;object-fit:cover;background:#e8e3d9;" onerror="this.src='/images/icon.png'">
-                <span style="font-size:14px;font-weight:500;">${f.nickname}</span>
+                <img src="avatars/${escapeHtml(f.avatar||'')}" style="width:40px;height:40px;border-radius:10px;object-fit:cover;background:#e8e3d9;" onerror="this.src='/images/icon.png'">
+                <span style="font-size:14px;font-weight:500;">${escapeHtml(f.nickname||'')}</span>
             </label>`;
     });
 
@@ -444,12 +444,12 @@ async function loadDbList() {
                 const roleText = item.is_owner ? '创建者' : '成员';
                 const nameColor = item.is_owner ? (item.my_vip==='svip'?'#dc2626':item.my_vip==='vip'?'#d4a017':'#1a1a1a') : '#1a1a1a';
                 const ownerColor = item.owner_vip==='svip'?'#dc2626':item.owner_vip==='vip'?'#d4a017':'#8b7355';
-                const displayName = item.is_member && item.owner_name ? `${item.name}--<span style="color:${ownerColor}">${item.owner_name}</span>` : item.name;
+                const displayName = item.is_member && item.owner_name ? `${escapeHtml(item.name||'')}--<span style="color:${ownerColor}">${escapeHtml(item.owner_name||'')}</span>` : escapeHtml(item.name||'');
                 return `<div class="db-item">
                     <div class="db-icon">${item.is_owner?'📁':'🏢'}</div>
                     <div class="db-info">
                         <div class="db-name-line"><span class="db-name" style="color:${nameColor}">${displayName}</span><span style="font-size:11px;color:#8b7355;">${roleText}</span></div>
-                        <div class="db-detail">ID: ${item.table} | 密钥: ${item.tokey}</div>
+                        <div class="db-detail">ID: ${escapeHtml(item.table||'')} | 密钥: ${escapeHtml(item.tokey||'')}</div>
                     </div>
                     <div class="db-actions">
                         ${item.is_member ? `<button class="btn-remove" onclick="removeDb('${item.table}')">移除</button>` : ''}
@@ -535,7 +535,7 @@ function showTokeyPopup(configId, oldTokey) {
     const ov = document.createElement('div'); ov.className='overlay'; ov.id='TokeyOverlay';
     ov.innerHTML = `<div class="popup">
         <h3>修改密钥</h3>
-        <input id="NewTokey" placeholder="新Tokey" value="${oldTokey}">
+        <input id="NewTokey" placeholder="新Tokey" value="${escapeHtml(oldTokey||'')}">
         <div style="display:flex;gap:10px;justify-content:flex-end;">
             <button onclick="document.getElementById('TokeyOverlay').remove()" style="background:#e8e3d9;">取消</button>
             <button onclick="updateTokey('${configId}')" style="background:#c84628;color:#fff;">保存</button>
@@ -567,8 +567,8 @@ function showMembersPopup(configId) {
             let html = '<div class="popup"><h3>成员列表</h3>';
             members.forEach(m => {
                 html += `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;">
-                    <img src="avatars/${m.avatar}" style="width:36px;height:36px;border-radius:10px;" onerror="this.src='/images/icon.png'">
-                    <span style="flex:1;">${m.name} ${m.role==='owner'?'👑':''}</span>
+                    <img src="avatars/${escapeHtml(m.avatar||'')}" style="width:36px;height:36px;border-radius:10px;" onerror="this.src='/images/icon.png'">
+                    <span style="flex:1;">${escapeHtml(m.name||'')} ${m.role==='owner'?'👑':''}</span>
                     ${m.user_id!=UserId && item.is_owner ? `<button onclick="removeMember('${configId}',${m.user_id})" style="color:#c84628;border:1px solid #fecaca;border-radius:8px;padding:4px 10px;background:#fff;cursor:pointer;">删除</button>` : ''}
                 </div>`;
             });

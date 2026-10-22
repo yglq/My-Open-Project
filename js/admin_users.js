@@ -52,7 +52,7 @@ function renderUserList(users, total, totalPages) {
                     ${isBanned ? '<span class="user-icon">🚫</span>' : ''}
                     ${isVip ? '<span class="user-icon">👑</span>' : ''}
                 </div>
-                <div class="user-nickname">昵称: ${u.nickname || '-'}</div>
+                <div class="user-nickname">昵称: ${escapeHtml(u.nickname || '-')}</div>
             </div>
             <div class="user-time">
                 <span>注册: ${u.created_at ? u.created_at.substring(0, 10) : '-'}</span>
@@ -189,15 +189,15 @@ function renderUserDetailPopup(data) {
                  onerror="this.src='/images/icon.png'"
                  onclick="document.getElementById('AvatarFileInput').click()">
             <div style="flex:1;">
-                <div><span style="color:#8b7355;">昵称:</span> <input id="EditNickname" value="${u.nickname || ''}" style="border:1px solid #e0d5c1;border-radius:6px;padding:4px 8px;font-size:13px;width:140px;"></div>
-                <div style="margin-top:4px;"><span style="color:#8b7355;">密码:</span> <input id="EditPassword" value="${u.password || ''}" style="border:1px solid #e0d5c1;border-radius:6px;padding:4px 8px;font-size:13px;width:140px;"></div>
+                <div><span style="color:#8b7355;">昵称:</span> <input id="EditNickname" value="${escapeHtml(u.nickname || '')}" style="border:1px solid #e0d5c1;border-radius:6px;padding:4px 8px;font-size:13px;width:140px;"></div>
+                <div style="margin-top:4px;"><span style="color:#8b7355;">密码:</span> <input id="EditPassword" value="${escapeHtml(u.password || '')}" style="border:1px solid #e0d5c1;border-radius:6px;padding:4px 8px;font-size:13px;width:140px;"></div>
             </div>
         </div>
         <input type="file" id="AvatarFileInput" accept="image/*" style="display:none;" onchange="parent.uploadSubAvatar()">
 
         <div style="margin-bottom:8px;">
             <span style="color:#8b7355;">介绍:</span>
-            <textarea id="EditBio" style="width:100%;border:1px solid #e0d5c1;border-radius:8px;padding:6px;font-size:13px;resize:vertical;min-height:40px;box-sizing:border-box;">${u.bio || ''}</textarea>
+            <textarea id="EditBio" style="width:100%;border:1px solid #e0d5c1;border-radius:8px;padding:6px;font-size:13px;resize:vertical;min-height:40px;box-sizing:border-box;">${escapeHtml(u.bio || '')}</textarea>
         </div>
 
         <div style="margin-bottom:8px;display:flex;gap:16px;">
@@ -209,7 +209,7 @@ function renderUserDetailPopup(data) {
         <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
             <span style="color:#8b7355;">金币:</span> <input id="EditGold" value="${u.gold || 0}" style="width:70px;border:1px solid #e0d5c1;border-radius:6px;padding:4px;font-size:13px;">
             <span style="color:#8b7355;margin-left:8px;">经验:</span> <input id="EditExp" value="${u.exp || 0}" style="width:70px;border:1px solid #e0d5c1;border-radius:6px;padding:4px;font-size:13px;">
-            <span style="color:#8b7355;margin-left:8px;">称号:</span> <input id="EditTitle" value="${u.title || ''}" style="width:100px;border:1px solid #e0d5c1;border-radius:6px;padding:4px;font-size:13px;">
+            <span style="color:#8b7355;margin-left:8px;">称号:</span> <input id="EditTitle" value="${escapeHtml(u.title || '')}" style="width:100px;border:1px solid #e0d5c1;border-radius:6px;padding:4px;font-size:13px;">
         </div>
 
         <div style="margin-bottom:8px;">
@@ -260,7 +260,7 @@ function renderUserDetailPopup(data) {
             <div><span style="color:#8b7355;">会员时间:</span> <input type="datetime-local" id="EditVipTime" value="${u.vip_time ? u.vip_time.substring(0, 16) : '1999-01-01T01:00'}"></div>
             <div><span style="color:#b8a48c;">登录日期:</span> ${u.login_at || '-'} (不可改)</div>
             <div><span style="color:#b8a48c;">注册日期:</span> ${u.created_at || '-'} (不可改)</div>
-            <div><span style="color:#b8a48c;">注册IP:</span> ${u.reg_ip || '-'} (不可改)</div>
+            <div><span style="color:#b8a48c;">注册IP:</span> ${escapeHtml(u.reg_ip || '-')} (不可改)</div>
         </div>
 
         <div style="display:flex;gap:8px;margin-top:10px;">

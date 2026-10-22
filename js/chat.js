@@ -40,11 +40,11 @@ async function loadMsgList() {
         if (_data.code === 0 && _data.data.length > 0) {
   ListEl.innerHTML = _data.data.map(_item => `
     <div class="msg-item" onclick="parent.openChat('${_item.chat_id}')">
-                 <img src="${_item.is_group ? 'group_avatars/' + _item.avatar : 'avatars/' + _item.avatar}" 
+                 <img src="${escapeHtml((_item.is_group ? 'group_avatars/' : 'avatars/') + (_item.avatar || ''))}" 
                          class="msg-avatar" onerror="this.src='/images/icon.png'">
                     <div class="msg-info">
-                        <div class="msg-name">${_item.name}</div>
-                        <div class="msg-text">${_item.last_msg || '暂无消息'}</div>
+                        <div class="msg-name">${escapeHtml(_item.name || '')}</div>
+                        <div class="msg-text">${escapeHtml(_item.last_msg || '暂无消息')}</div>
                     </div>
                     ${_item.unread > 0 ? `<span class="msg-badge">${_item.unread}</span>` : ''}
                 </div>
@@ -238,7 +238,7 @@ else if (_vip === 'vip') senderColor = '#d4a017';
                 break;
             case 'Image':
                 if (msg.ImagePath) {
-                    body = `<img src="${msg.ImagePath}" class="msg-image" onerror="this.outerHTML='<div class=\\'msg-text\\' style=\\'color:#c84628;\\'>图片不存在</div>'">`;
+                    body = `<img src="${escapeHtml(msg.ImagePath)}" class="msg-image" onerror="this.outerHTML='<div class=\\'msg-text\\' style=\\'color:#c84628;\\'>图片不存在</div>'">`;
                 } else {
                     body = `<div class="msg-text" style="color:#c84628;">图片不存在</div>`;
                 }
@@ -266,20 +266,20 @@ else if (_vip === 'vip') senderColor = '#d4a017';
                             <span class="msg-studio-name">${escapeHtml(msg.StudioName || '')}</span>
                             <span class="msg-studio-id">${escapeHtml(msg.ConfigId || '')}</span>
                         </div>
-                        ${!isMine ? `<button class="msg-studio-btn ${isAlreadyIn ? 'done' : ''}" onclick="${isAlreadyIn ? '' : `parent.acceptStudio('${msg.ConfigId || ''}', '${msg.MsgId || ''}', '${(ChatData.ChatId || CurrentChatId || '')}')`}">${isAlreadyIn ? '已加入' : '加入'}</button>` : ''}
+                        ${!isMine ? `<button class="msg-studio-btn ${isAlreadyIn ? 'done' : ''}" onclick="${isAlreadyIn ? '' : `parent.acceptStudio('${escapeHtml(msg.ConfigId || '')}', '${escapeHtml(msg.MsgId || '')}', '${escapeHtml(ChatData.ChatId || CurrentChatId || '')}')`}">${isAlreadyIn ? '已加入' : '加入'}</button>` : ''}
                     </div>`;
                 break;
         }
 
         return `
             <div class="${rowClass}">
-                <img src="avatars/${senderAvatar}" class="msg-avatar" onerror="this.src='/images/icon.png'">
+                <img src="avatars/${escapeHtml(senderAvatar)}" class="msg-avatar" onerror="this.src='/images/icon.png'">
                 <div class="msg-col">
                     <div class="msg-bubble">
-           ${!isMine ? `<div style="font-size:11px;font-weight:600;color:${senderColor};margin-bottom:3px;">${senderName}</div>` : ''}  
+           ${!isMine ? `<div style="font-size:11px;font-weight:600;color:${senderColor};margin-bottom:3px;">${escapeHtml(senderName)}</div>` : ''}  
                         ${body}
                     </div>
-                    <div class="msg-time">${Time}</div>
+                    <div class="msg-time">${escapeHtml(Time)}</div>
                     ${isGroup && readCount > 0 ? `<div class="msg-read ${readCount <= 1 ? 'zero' : ''}" onclick="parent.showReadList('${MsgId}')">${readCount}人已读</div>` : ''}
                 </div>
             </div>`;

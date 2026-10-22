@@ -426,8 +426,17 @@ function generateUniqueTableName() {
 
 // 把实时事件推送给在线成员（tools/ws_server.php）；失败静默，不影响主流程
 function wsPublishToMembers(array $memberIds, array $payload) {
-    $tokenFile = __DIR__ . '/../tools/ws_internal.token';
-    $token = is_file($tokenFile) ? trim(file_get_contents($tokenFile)) : '';
+    static $__sec = null;
+    if ($__sec === null) {
+        $__f = __DIR__ . '/../tools/secrets.php';
+        $__sec = is_file($__f) ? (include $__f) : [];
+    }
+    $token = is_array($__sec) ? ($__sec['ws_internal'] ?? '') : '';
+    if ($token === '') {
+        // 兼容旧的纯文本令牌文件
+        $tokenFile = __DIR__ . '/../tools/ws_internal.token';
+        $token = is_file($tokenFile) ? trim(file_get_contents($tokenFile)) : '';
+    }
     if ($token === '') return;
     $body = json_encode([
         'member_ids' => array_map('intval', $memberIds),

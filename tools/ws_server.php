@@ -19,16 +19,12 @@ ignore_user_abort(true);
 require_once __DIR__ . '/../lib/db.php';
 
 const WS_PORT = 2081;
-const INTERNAL_TOKEN_FILE = __DIR__ . '/ws_internal.token';
 const PID_FILE = __DIR__ . '/ws_server.pid';
 const LOG_FILE = __DIR__ . '/ws.log';
 
-// ---- 内部推送令牌：首次启动自动生成，不落库不进 git ----
-if (!is_file(INTERNAL_TOKEN_FILE)) {
-    file_put_contents(INTERNAL_TOKEN_FILE, bin2hex(random_bytes(20)));
-    @chmod(INTERNAL_TOKEN_FILE, 0600);
-}
-$InternalToken = trim(file_get_contents(INTERNAL_TOKEN_FILE));
+// ---- 内部推送令牌：从 tools/secrets.php 读（PHP return 数组，网页访问不会泄露）----
+$__sec = is_file(__DIR__ . '/secrets.php') ? (include __DIR__ . '/secrets.php') : [];
+$InternalToken = is_array($__sec) ? ($__sec['ws_internal'] ?? '') : '';
 
 file_put_contents(PID_FILE, (string)getmypid());
 

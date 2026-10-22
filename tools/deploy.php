@@ -32,8 +32,12 @@ header('Content-Type: application/json; charset=utf-8');
 // ========== 配置 ==========
 // 项目根目录：deploy.php 所在目录的上一级（tools/ 下）。若把本文件放根目录请改回 __DIR__
 $ROOT = realpath(__DIR__ . '/..');
-// 禁止读写的路径（相对根目录），防自删/防覆盖令牌
-$DENY = ['tools/deploy.token', '.git', '.deploy_token'];
+// 禁止读写的路径（相对根目录），防自删/防覆盖令牌/密钥/日志
+$DENY = [
+    'tools/secrets.php', 'tools/deploy.token', 'tools/deploy.dbpass',
+    'tools/ws_internal.token', 'tools/ws.log', 'tools/ws_server.pid',
+    '.git', '.deploy_token',
+];
 
 // action=sql 允许操作的库（白名单）
 $DB_WHITELIST = ['game_data', 'user_data', 'card_data'];
@@ -53,17 +57,32 @@ function err($msg) {
     out(['code' => 1, 'message' => $msg]);
 }
 
+// 密钥统一放 tools/secrets.php（PHP return 数组，网页访问输出为空，无法被下载）
+function loadSecrets() {
+    static $s = null;
+    if ($s === null) {
+        $f = __DIR__ . '/secrets.php';
+        $s = is_file($f) ? (include $f) : [];
+        if (!is_array($s)) $s = [];
+    }
+    return $s;
+}
+
 function loadToken() {
     $t = getenv('LQ_DEPLOY_TOKEN');
     if ($t) return $t;
+    $s = loadSecrets();
+    if (!empty($s['deploy_token'])) return $s['deploy_token'];
     $f = __DIR__ . '/deploy.token';
     return is_file($f) ? trim(file_get_contents($f)) : '';
 }
 
-// DB 密码：环境变量优先，其次 tools/deploy.dbpass（不进 git）
+// DB 密码：环境变量优先，其次 secrets.php，最后兼容旧的 deploy.dbpass
 function loadDbPass() {
     $p = getenv('LQ_DB_PASS');
     if ($p !== false && $p !== '') return $p;
+    $s = loadSecrets();
+    if (!empty($s['db_pass'])) return $s['db_pass'];
     $f = __DIR__ . '/deploy.dbpass';
     return is_file($f) ? trim(file_get_contents($f)) : '';
 }
@@ -203,8 +222,12 @@ try {
                 @file_put_contents($ROOT . '/backups/index.html', '');
             }
 
-            // 1) 复制源码（排除 backups/、.git、令牌/密码文件自身）
-            $skip = [$ROOT . '/backups', $ROOT . '/.git', __DIR__ . '/deploy.token', __DIR__ . '/deploy.dbpass'];
+            // 1) 复制源码（排除 backups/、.git、密钥/令牌/日志文件）
+            $skip = [
+                $ROOT . '/backups', $ROOT . '/.git',
+                __DIR__ . '/secrets.php', __DIR__ . '/deploy.token', __DIR__ . '/deploy.dbpass',
+                __DIR__ . '/ws_internal.token', __DIR__ . '/ws.log', __DIR__ . '/ws_server.pid',
+            ];
             $srcDir = $bkDir . '/source';
             mkdir($srcDir, 0755, true);
             $iter = new RecursiveIteratorIterator(

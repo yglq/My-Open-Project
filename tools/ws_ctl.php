@@ -11,7 +11,9 @@ try {
 
     $Token = trim($_POST['Token'] ?? '');
     $Action = trim($_POST['Action'] ?? 'status');
-    $Expected = trim(@file_get_contents(__DIR__ . '/deploy.token') ?: '');
+    $__sec = is_file(__DIR__ . '/secrets.php') ? (include __DIR__ . '/secrets.php') : [];
+    $Expected = is_array($__sec) ? ($__sec['deploy_token'] ?? '') : '';
+    if ($Expected === '') $Expected = trim(@file_get_contents(__DIR__ . '/deploy.token') ?: '');
     $EnvToken = getenv('LQ_DEPLOY_TOKEN') ?: '';
     if ($Token === '' || ($Token !== $Expected && $Token !== $EnvToken)) {
         throw new Exception('令牌无效');

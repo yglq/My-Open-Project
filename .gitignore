@@ -19,3 +19,4 @@ tools/ws_internal.token
 tools/ws_server.pid
 tools/ws.log
 backups/
+tools/secrets.php
