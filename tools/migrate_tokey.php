@@ -11,7 +11,9 @@ try {
     requirePost();
 
     $_token = trim($_POST['Token'] ?? '');
-    $_valid = getenv('LQ_DEPLOY_TOKEN') ?: (is_file(__DIR__ . '/deploy.token') ? trim(file_get_contents(__DIR__ . '/deploy.token')) : '');
+    $__sec = is_file(__DIR__ . '/secrets.php') ? (include __DIR__ . '/secrets.php') : [];
+    $_valid = getenv('LQ_DEPLOY_TOKEN') ?: (is_array($__sec) ? ($__sec['deploy_token'] ?? '') : '')
+        ?: (is_file(__DIR__ . '/deploy.token') ? trim(file_get_contents(__DIR__ . '/deploy.token')) : '');
     if ($_valid === '' || !hash_equals($_valid, $_token)) throw new Exception('令牌无效');
 
     $_pdo = GetPDO();

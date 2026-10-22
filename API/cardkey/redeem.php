@@ -89,6 +89,9 @@ try {
     if (!$_card) throw new Exception('卡密不存在');
     if ($_card['used_at'] !== null) throw new Exception('卡密已被使用');
 
+    // 认领+发奖+写日志全在一个事务里：任何一步失败整体回滚，不会出现"奖发了但卡还能用"
+    $_pdo->beginTransaction();
+
     // 原子认领：仅当 used_at 仍为 NULL 时才能认领成功（防止并发重复兑换）
     $_claim = $_pdo->prepare(
         "UPDATE $_cardTable
@@ -250,6 +253,8 @@ try {
     $_stmtCU = $_pdo->prepare("UPDATE admin_config SET redeem_log = :log WHERE config_id = :cid");
     $_stmtCU->execute(['log' => json_encode($_cfgLog, JSON_UNESCAPED_UNICODE), 'cid' => $ConfigId]);
 
+    $_pdo->commit();
+
     echo json_encode([
         'code'    => 0,
         'message' => '兑换成功',
@@ -258,17 +263,9 @@ try {
     ], JSON_UNESCAPED_UNICODE);
 
 } catch (Exception $e) {
-    // 若已认领但后续发奖/写日志失败，回滚认领状态，避免卡密被吃掉
-    if (isset($_claimed) && $_claimed && isset($_pdo) && isset($Code) && isset($_uid)) {
-        try {
-            $_cardTable = "`card_data`.`{$ConfigId}_cardkey`";
-            $_rb = $_pdo->prepare(
-                "UPDATE $_cardTable
-                 SET used_at = NULL, used_by = NULL, used_username = NULL, used_ip = NULL
-                 WHERE code = :code AND used_by = :uid"
-            );
-            $_rb->execute(['code' => $Code, 'uid' => $_uid]);
-        } catch (Exception $ignored) {}
+    // 事务内任何一步失败：整体回滚，认领状态和已发奖励一起撤掉
+    if (isset($_pdo) && $_pdo->inTransaction()) {
+        try { $_pdo->rollBack(); } catch (Exception $ignored) {}
     }
     http_response_code(400);
     apiError($e);

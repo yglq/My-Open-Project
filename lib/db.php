@@ -80,7 +80,7 @@ function validateApiToken($ConfigId, $ApiToken) {
     $_config = $_stmt->fetch();
     if (!$_config) throw new Exception('配置不存在');
     if (intval($_config['api_token_switch'] ?? 0) === 1) {
-        if ($_config['api_token'] !== $ApiToken) throw new Exception('ApiToken 错误');
+        if (!hash_equals((string)$_config['api_token'], (string)$ApiToken)) throw new Exception('ApiToken 错误');
     }
 }
 
