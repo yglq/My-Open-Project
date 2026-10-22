@@ -15,6 +15,7 @@ try {
     requirePost();
 
     $_pdo = GetPDO();
+    rateLimit('user/register', 3, 300);
 
     // ---------- 接收并校验参数 ----------
     $UserName = trim($_POST['UserName'] ?? '');
@@ -118,11 +119,12 @@ try {
         ]
     ], JSON_UNESCAPED_UNICODE);
 
+    $_defTokey = randomString(21, 'table');
     $_jsonData = json_encode([
         [
             'table' => $_dataTable,
             'name'  => '默认数据库',
-            'tokey' => randomString(21, 'table')
+            'tokey' => $_defTokey
         ]
     ], JSON_UNESCAPED_UNICODE);
 
@@ -133,7 +135,7 @@ try {
         'rec'   => $_record,
     ]);
 
-    // ---------- 创建 admin_config + studio_members ----------
+    // ---------- 创建 admin_config + studio_members（Tokey 存配置表 tokey 字段） ----------
     $_apiToken = randomString(21, 'table');
     $_initMembers = json_encode([[
         'user_id'   => $_newUserId,
@@ -143,19 +145,22 @@ try {
         'joined_at' => date('Y-m-d-H-i-s')
     ]], JSON_UNESCAPED_UNICODE);
 
-    $_stmtA = $_pdo->prepare("INSERT INTO admin_config (config_id, user_id, api_token, studio_members) VALUES (:cid, :uid, :token, :sm)");
+    $_stmtA = $_pdo->prepare("INSERT INTO admin_config (config_id, user_id, api_token, tokey, studio_members) VALUES (:cid, :uid, :token, :tk, :sm)");
     $_stmtA->execute([
         'cid'   => $_dataTable,
         'uid'   => $_newUserId,
         'token' => $_apiToken,
+        'tk'    => $_defTokey,
         'sm'    => $_initMembers
     ]);
 
-    // ---------- 成功返回 ----------
+    // ---------- 成功返回（顺带签发登录态，注册即登录） ----------
+    $_sessionToken = issueSessionToken((int)$_newUserId);
     echo json_encode([
-        'code'    => 0,
-        'message' => '注册成功',
-        'userId'  => (int)$_newUserId
+        'code'         => 0,
+        'message'      => '注册成功',
+        'userId'       => (int)$_newUserId,
+        'sessionToken' => $_sessionToken
     ], JSON_UNESCAPED_UNICODE);
 
 } catch (Exception $e) {

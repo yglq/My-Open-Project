@@ -45,9 +45,10 @@ try {
     $_giftGold = intval($_config['sign_gold'] ?? 0);
     $_giftExp  = intval($_config['sign_exp'] ?? 0);
 
-    // 更新
-    $_stmt3 = $_pdo->prepare("UPDATE `user_data`.`$ConfigId` SET sign_date = :sd, gold = gold + :g, exp = exp + :e WHERE id = :uid");
-    $_stmt3->execute(['sd' => $_today, 'g' => $_giftGold, 'e' => $_giftExp, 'uid' => $_user['id']]);
+    // 更新（WHERE 里带上 sign_date 条件，两个并发请求只有一个能签到成功，防重复领奖励）
+    $_stmt3 = $_pdo->prepare("UPDATE `user_data`.`$ConfigId` SET sign_date = :sd, gold = gold + :g, exp = exp + :e WHERE id = :uid AND (sign_date IS NULL OR sign_date <> :sd2)");
+    $_stmt3->execute(['sd' => $_today, 'sd2' => $_today, 'g' => $_giftGold, 'e' => $_giftExp, 'uid' => $_user['id']]);
+    if ($_stmt3->rowCount() !== 1) throw new Exception('今日已签到');
 
     echo json_encode([
         'code'    => 0,

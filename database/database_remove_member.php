@@ -5,6 +5,7 @@ header('Content-Type: application/json; charset=utf-8');
 try {
 
     requirePost();
+    authUser();
     $UserId       = intval($_POST['UserId'] ?? 0);
     $ConfigId     = trim($_POST['ConfigId'] ?? '');
     $TargetUserId = intval($_POST['TargetUserId'] ?? 0);

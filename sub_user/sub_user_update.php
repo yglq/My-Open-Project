@@ -33,52 +33,48 @@ try {
     $_varNames = parseCustomVarNames($_cfg['custom_vars'] ?? '[]');
     $_tblDefs  = parseCustomTableDefs($_cfg['custom_tables'] ?? '{}');
 
-    $_allFields = array_merge($_baseFields, $_varNames, array_keys($_tblDefs));
-
+    // 基础字段走主表列更新；自定义变量/JSON 表写侧表
     $_sets = [];
     $_params = [];
-foreach ($_allFields as $_f) {
-    if (array_key_exists($_f, $_POST) && $_POST[$_f] !== '') {
-        $_safeCol = _safeIdent($_f);
-        if (!in_array($_safeCol, $_existingCols)) {
-            $_isTable = array_key_exists($_f, $_tblDefs);
-            $_colType = $_isTable ? 'JSON DEFAULT NULL' : "VARCHAR(255) DEFAULT '0'";
-            $_alterSQL = "ALTER TABLE `user_data`.`$ConfigId` ADD COLUMN `$_safeCol` $_colType";
-            $_pdo->exec($_alterSQL);
-            $_existingCols[] = $_safeCol;
-        }
+    $_customVarWrites = [];
+    $_customTblWrites = [];
 
-        $paramKey = 'p_' . $_safeCol;
-        $_sets[] = "`$_safeCol` = :$paramKey";
-        if ($_f === 'password') {
-            $HashPwd = intval($_POST['HashPwd'] ?? 0);
-            $_params[$paramKey] = hashSubPwd($_POST[$_f], $HashPwd);
-        } else {
-            $_val = $_POST[$_f];
-            // 自定义 JSON 表：前端按 [对象] 数组提交，按设计只存单个对象
-            if (array_key_exists($_f, $_tblDefs)) {
-                $_dec = json_decode($_val, true);
-                if (is_array($_dec)) {
-                    $_keys = array_keys($_dec);
-                    $_isList = !empty($_dec) && ($_keys === range(0, count($_dec) - 1));
-                    if ($_isList) {
-                        // 列表则取第一个元素作为单对象存储（空列表存 {}）
-                        $_obj = count($_dec) > 0 ? $_dec[0] : new stdClass();
-                        $_val = json_encode($_obj, JSON_UNESCAPED_UNICODE);
-                    }
-                    // 本身已是对象则保持原样
-                }
-            }
-            $_params[$paramKey] = $_val;
+    foreach ($_baseFields as $_f) {
+        if (array_key_exists($_f, $_POST) && $_POST[$_f] !== '') {
+            $_safeCol = _safeIdent($_f);
+            $paramKey = 'p_' . $_safeCol;
+            $_sets[] = "`$_safeCol` = :$paramKey";
+            $_params[$paramKey] = ($_f === 'password')
+                ? hashSubPwd($_POST[$_f], intval($_POST['HashPwd'] ?? 0))
+                : $_POST[$_f];
         }
     }
-}
-    if (empty($_sets)) throw new Exception('没有需要更新的数据');
+    foreach ($_varNames as $_f) {
+        if (array_key_exists($_f, $_POST)) $_customVarWrites[$_f] = $_POST[$_f];
+    }
+    foreach (array_keys($_tblDefs) as $_f) {
+        if (array_key_exists($_f, $_POST)) {
+            $_dec = json_decode($_POST[$_f], true);
+            if (is_array($_dec)) {
+                if (!empty($_dec) && array_keys($_dec) !== range(0, count($_dec) - 1)) $_dec = [$_dec];
+                $_customTblWrites[$_f] = $_dec;
+            }
+        }
+    }
 
-    $_params['uid'] = $SubUserId;
-    $_sql = "UPDATE `user_data`.`$ConfigId` SET " . implode(', ', $_sets) . " WHERE id = :uid";
-    $_stmt2 = $_pdo->prepare($_sql);
-    $_stmt2->execute($_params);
+    if (empty($_sets) && empty($_customVarWrites) && empty($_customTblWrites)) {
+        throw new Exception('没有需要更新的数据');
+    }
+
+    if (!empty($_sets)) {
+        $_params['uid'] = $SubUserId;
+        $_sql = "UPDATE `user_data`.`$ConfigId` SET " . implode(', ', $_sets) . " WHERE id = :uid";
+        $_stmt2 = $_pdo->prepare($_sql);
+        $_stmt2->execute($_params);
+    }
+
+    foreach ($_customVarWrites as $_n => $_v) customVarSet($ConfigId, $SubUserId, $_n, $_v);
+    foreach ($_customTblWrites as $_t => $_rows) customTableReplace($ConfigId, $SubUserId, $_t, $_rows);
 
     echo json_encode(['code' => 0, 'message' => '更新成功'], JSON_UNESCAPED_UNICODE);
 

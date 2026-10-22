@@ -11,7 +11,7 @@ async function loadNoticeConfig() {
         _formData.append('UserId', UserId);
         _formData.append('ConfigId', ConfigId);
         _formData.append('Tokey', Tokey);
-        const _res = await fetch('/admin/admin_config_get.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/admin/admin_config_get.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
 
         if (_data.code === 0) {
@@ -57,7 +57,7 @@ async function publishNotice() {
     _formData.append('notice_content', Content);
 
     try {
-        const _res = await fetch('/admin/notice_save.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/admin/notice_save.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
         if (_data.code === 0) {
             Toast.className = 'toast-inline success';
@@ -98,7 +98,7 @@ async function saveNoticeSettings() {
     _formData.append('notice_api_switch', NoticeApiSwitch);
 
     try {
-        const _res = await fetch('/admin/notice_save.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/admin/notice_save.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
         if (_data.code === 0) {
             Toast.className = 'toast-inline success';

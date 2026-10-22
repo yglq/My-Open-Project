@@ -62,14 +62,14 @@
         <div class="card-title">
             <span class="card-title-text">
                 <span class="toggle-icon" id="VarToggle" onclick="parent.toggleSection('var')">▶</span>
-                📝 自定义变量
+                📝 自定义变量（一行一个值：积分、等级这类单值数据）
             </span>
         </div>
        <div id="VarSection">
     <div id="VarList"></div>
     <div class="add-row">
         <input id="NewVarName" placeholder="变量名">
-        <select id="NewVarType" style="padding:6px 10px;border:1px solid #e0d5c1;border-radius:8px;font-size:12px;outline:none;font-family:inherit;"><option value="value">value</option><option value="string">string</option></select>
+        <select id="NewVarType" style="padding:6px 10px;border:1px solid #e0d5c1;border-radius:8px;font-size:12px;outline:none;font-family:inherit;"><option value="value">数值</option><option value="string">文本</option></select>
         <input id="NewVarDefault" placeholder="默认值" value="0">
         <button class="btn-add" onclick="parent.addCustomVar()">添加</button>
     </div>
@@ -83,14 +83,14 @@
         <div class="card-title">
             <span class="card-title-text">
                 <span class="toggle-icon" id="TableToggle" onclick="parent.toggleSection('table')">▶</span>
-                📋 自定义JSON
+                📋 自定义JSON表（多行记录：背包、订单这类列表数据）
             </span>
         </div>
      <div id="TableSection">
     <div id="TableList"></div>
     <div class="add-row">
         <input id="NewTblName" placeholder="表名">
-        <input id="NewTblCols" placeholder="例如: teststr:string,count:value">
+        <input id="NewTblCols" placeholder="列定义，如 hp:value,name:string" style="width:200px;">
         <button class="btn-add" onclick="parent.addCustomTable()">添加</button>
     </div>
     <button class="btn-add" style="margin-top:8px;width:100%;" onclick="parent.saveCustomConfig()">💾 保存JSON设置</button>

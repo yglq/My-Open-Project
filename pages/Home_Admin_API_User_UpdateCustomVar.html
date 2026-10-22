@@ -39,7 +39,7 @@
             <tr><td>Username</td><td>String</td><td class="required">是</td><td>子用户账号</td></tr>
             <tr><td>Password</td><td>String</td><td class="required">是</td><td>子用户密码</td></tr>
             <tr><td>VarName</td><td>String</td><td class="required">是</td><td>变量名（必须在后台已定义）</td></tr>
-            <tr><td>Value</td><td>String</td><td class="required">是</td><td>新值</td></tr>
+            <tr><td>Value</td><td>String</td><td class="required">是</td><td>新值（数值型变量必须传数字）</td></tr>
         </table>
     </div>
     <div class="api-card">
@@ -51,7 +51,7 @@
     </div>
     <div class="api-card">
         <div class="api-section-title">提示</div>
-        <div class="api-hint">• VarName 必须在后台"自定义变量"中已定义<br>• 变量列不存在时会自动创建<br>• 只能修改自己的数据</div>
+        <div class="api-hint">• VarName 必须在后台"自定义变量"中已定义<br>• 数据存在独立变量表里，增删变量不影响主表结构<br>• 数值型（value）变量传非数字会被拒绝<br>• 只能修改自己的数据</div>
     </div>
     <div class="api-card">
         <div class="api-section-title">示例</div>

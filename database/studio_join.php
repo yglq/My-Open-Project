@@ -9,6 +9,7 @@ header('Content-Type: application/json; charset=utf-8');
 try {
 
     requirePost();
+    authUser();
 
     $UserId   = intval($_POST['UserId'] ?? 0);
     $ConfigId = trim($_POST['ConfigId'] ?? '');
@@ -22,24 +23,16 @@ try {
     $_pdo = GetPDO();
 
     // 校验邀请消息：必须存在且为 InviteStudio，且当前用户在该对话中（避免把密钥泄露到聊天）
-    $_stmtChat = $_pdo->prepare("SELECT chat_json FROM chat_data WHERE chat_id = :cid LIMIT 1");
-    $_stmtChat->execute(['cid' => $ChatId]);
-    $_chat = $_stmtChat->fetch();
-    if (!$_chat) throw new Exception('对话不存在');
-    $_chatJson = json_decode($_chat['chat_json'] ?? '[]', true) ?: [];
-    if (!array_key_exists(strval($UserId), $_chatJson['Members'] ?? [])) {
+    if (!chatIsMember($_pdo, $ChatId, $UserId)) {
         throw new Exception('你不在该对话中');
     }
-    $_invite = null;
-    foreach ($_chatJson['Messages'] ?? [] as $_m) {
-        if ((int)($_m['MsgId'] ?? 0) === $MsgId
-            && ($_m['Type'] ?? '') === 'InviteStudio'
-            && ($_m['ConfigId'] ?? '') === $ConfigId) {
-            $_invite = $_m;
-            break;
-        }
+    $_stmtM = $_pdo->prepare("SELECT * FROM chat_messages WHERE msg_id = :m AND chat_id = :c AND mtype = 'InviteStudio' LIMIT 1");
+    $_stmtM->execute(['m' => $MsgId, 'c' => $ChatId]);
+    $_mRow = $_stmtM->fetch();
+    $_invite = $_mRow ? chatRowToMsg($_mRow) : null;
+    if (!$_invite || ($_invite['ConfigId'] ?? '') !== $ConfigId) {
+        throw new Exception('邀请消息不存在或已失效');
     }
-    if (!$_invite) throw new Exception('邀请消息不存在或已失效');
 
     // 校验邀请者确实是该工作室的成员/创建者
     $_senderId = intval($_invite['SenderId'] ?? 0);
@@ -65,13 +58,19 @@ try {
 
     if (!$_reg) throw new Exception('工作室不存在');
 
-    // 从 table_data JSON 中取 tokey（仅服务端内部使用，不对外暴露）
+    // 从配置表取 tokey（仅服务端内部使用，不对外暴露）；回退 JSON
     $_actualTokey = '';
-    $_regData = json_decode($_reg['table_data'], true) ?: [];
-    foreach ($_regData as $_item) {
-        if (($_item['table'] ?? '') === $ConfigId) {
-            $_actualTokey = $_item['tokey'] ?? '';
-            break;
+    $_stmtK = $_pdo->prepare("SELECT tokey FROM admin_config WHERE config_id = :cid LIMIT 1");
+    $_stmtK->execute(['cid' => $ConfigId]);
+    $_tkRow = $_stmtK->fetchColumn();
+    if ($_tkRow !== false && $_tkRow !== '') {
+        $_actualTokey = $_tkRow;
+    } else {
+        foreach ((json_decode($_reg['table_data'], true) ?: []) as $_item) {
+            if (($_item['table'] ?? '') === $ConfigId) {
+                $_actualTokey = $_item['tokey'] ?? '';
+                break;
+            }
         }
     }
 

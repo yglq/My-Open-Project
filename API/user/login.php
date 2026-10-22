@@ -22,6 +22,7 @@ try {
     }
 
     $_pdo = GetPDO();
+    rateLimit('API/user/login', 10, 60);
 
     // 获取配置
     $_stmt = $_pdo->prepare("SELECT * FROM admin_config WHERE config_id = :cid LIMIT 1");

@@ -48,44 +48,13 @@ $_stmtCfg->execute(['cid' => $ConfigId]);
 $_cfg = $_stmtCfg->fetch();
 
 if ($_cfg) {
-    // 确保自定义变量列 / JSON 列已存在，否则写默认值会报列不存在
-    ensureCustomColumns(
+    // 播种自定义变量/JSON 表默认值到侧表（新架构，不再 ALTER 主表加列）
+    seedCustomDefaults(
         $ConfigId,
-        $_cfg['custom_vars'] ?? '[]',
-        $_cfg['custom_vars_defaults'] ?? '[]',
-        $_cfg['custom_table_defaults'] ?? '[]'
+        $_newUserId,
+        $_cfg['custom_vars_defaults'] ?? '{}',
+        $_cfg['custom_table_defaults'] ?? '{}'
     );
-
-    $_varDefaults = $_cfg['custom_vars_defaults'] ? json_decode($_cfg['custom_vars_defaults'], true) : [];
-    $_tblDefaults = $_cfg['custom_table_defaults'] ? json_decode($_cfg['custom_table_defaults'], true) : [];
-
-    $_updateParts = [];
-    $_updateParams = [];
-
-    // 自定义变量默认值
-    foreach ($_varDefaults as $_vname => $_vval) {
-        $_safeVname = _safeIdent($_vname);
-        $_updateParts[] = "`$_safeVname` = :v_$_safeVname";
-        $_updateParams["v_$_safeVname"] = $_vval;
-    }
-
-    // 自定义 JSON 表默认值：直接构建一行数据
-    foreach ($_tblDefaults as $_tname => $_tcols) {
-        $_safeTname = _safeIdent($_tname);
-        $_initRow = [];
-        foreach ($_tcols as $_colName => $_colDefault) {
-            $_initRow[$_colName] = $_colDefault;
-        }
-        $_updateParts[] = "`$_safeTname` = :t_$_safeTname";
-        $_updateParams["t_$_safeTname"] = json_encode($_initRow, JSON_UNESCAPED_UNICODE);
-    }
-
-    if (!empty($_updateParts)) {
-        $_updateParams['newid'] = $_newUserId;
-        $_sqlInit = "UPDATE `user_data`.`$ConfigId` SET " . implode(', ', $_updateParts) . " WHERE id = :newid";
-        $_stmtInit = $_pdo->prepare($_sqlInit);
-        $_stmtInit->execute($_updateParams);
-    }
 }
 
 

@@ -9,6 +9,7 @@ header('Content-Type: application/json; charset=utf-8');
 try {
 
     requirePost();
+    authUser();
 
     $UserId    = intval($_POST['UserId'] ?? 0);
     $ChatId    = trim($_POST['ChatId'] ?? '');
@@ -19,40 +20,31 @@ try {
 
     $_pdo = GetPDO();
 
-    $_stmt = $_pdo->prepare("SELECT chat_json FROM chat_data WHERE chat_id = :cid LIMIT 1");
-    $_stmt->execute(['cid' => $ChatId]);
-    $_chat = $_stmt->fetch();
-    if (!$_chat) throw new Exception('群聊不存在');
+    $_stmtC = $_pdo->prepare("SELECT is_group FROM chat_conversations WHERE chat_id = :c LIMIT 1");
+    $_stmtC->execute(['c' => $ChatId]);
+    $_conv = $_stmtC->fetch();
+    if (!$_conv) throw new Exception('群聊不存在');
 
-    $_json = json_decode($_chat['chat_json'] ?? '[]', true);
-    $_members = $_json['Members'] ?? [];
-
-    if (!array_key_exists(strval($UserId), $_members)) throw new Exception('你不在该群聊中');
+    if (!chatIsMember($_pdo, $ChatId, $UserId)) throw new Exception('你不在该群聊中');
 
     $_added = 0;
+    $_insM = $_pdo->prepare("INSERT IGNORE INTO chat_members (chat_id,user_id,member_name,last_read_id,joined_at) VALUES (?,?,?,0,NOW())");
     foreach ($_selected as $_fid) {
         $_fid = intval($_fid);
-        if (array_key_exists(strval($_fid), $_members)) continue;
-
-        $_stmt2 = $_pdo->prepare("SELECT nickname, username, avatar, status FROM users WHERE user_id = :uid LIMIT 1");
+        $_stmt2 = $_pdo->prepare("SELECT nickname, username, status FROM users WHERE user_id = :uid LIMIT 1");
         $_stmt2->execute(['uid' => $_fid]);
         $_f = $_stmt2->fetch();
         if (!$_f || $_f['status'] == 1) continue;
-
-        $_members[strval($_fid)] = $_f['nickname'] ?: $_f['username'];
-
-        // 添加到 chat_list
-        $_newItem = json_encode(['chat_id' => $ChatId, 'last_msg_id' => 0]);
-        $_pdo->exec("UPDATE users SET chat_list = JSON_ARRAY_APPEND(COALESCE(chat_list, '[]'), '$', CAST('$_newItem' AS JSON)) WHERE user_id = $_fid");
-
-        $_added++;
+        $_insM->execute([$ChatId, $_fid, $_f['nickname'] ?: $_f['username']]);
+        if ($_insM->rowCount() > 0) $_added++;
     }
 
-    $_json['Members'] = $_members;
-    $_json['GroupMemberCount'] = count($_members);
-    $_newJson = json_encode($_json, JSON_UNESCAPED_UNICODE);
-    $_stmt3 = $_pdo->prepare("UPDATE chat_data SET chat_json = :json WHERE chat_id = :cid");
-    $_stmt3->execute(['json' => $_newJson, 'cid' => $ChatId]);
+    // 人数 >=3 确保是群
+    if (!intval($_conv['is_group'])) {
+        $_pdo->prepare("UPDATE chat_conversations SET is_group = 1 WHERE chat_id = :c")->execute(['c' => $ChatId]);
+    }
+
+    chatPushRefresh($_pdo, $ChatId);
 
     echo json_encode(['code' => 0, 'message' => "已邀请 $_added 人"], JSON_UNESCAPED_UNICODE);
 

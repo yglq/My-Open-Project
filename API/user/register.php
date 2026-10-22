@@ -17,6 +17,7 @@ try {
     }
 
     $_pdo = GetPDO();
+    rateLimit('API/user/register', 5, 300);
 
     $_stmt = $_pdo->prepare("SELECT * FROM admin_config WHERE config_id = :cid LIMIT 1");
     $_stmt->execute(['cid' => $ConfigId]);
@@ -95,43 +96,13 @@ try {
 
     $_newUserId = $_pdo->lastInsertId();
 
-    // 确保自定义变量列 / JSON 列已存在，否则建表后写默认值会报列不存在
-    ensureCustomColumns(
+    // 播种自定义变量/JSON 表默认值到侧表（新架构，不再 ALTER 主表加列）
+    seedCustomDefaults(
         $ConfigId,
-        $_config['custom_vars'] ?? '[]',
-        $_config['custom_vars_defaults'] ?? '[]',
-        $_config['custom_table_defaults'] ?? '[]'
+        $_newUserId,
+        $_config['custom_vars_defaults'] ?? '{}',
+        $_config['custom_table_defaults'] ?? '{}'
     );
-
-    // 初始化自定义变量和 JSON 表默认值
-    $_varDefaults = $_config['custom_vars_defaults'] ? json_decode($_config['custom_vars_defaults'], true) : [];
-    $_tblDefaults = $_config['custom_table_defaults'] ? json_decode($_config['custom_table_defaults'], true) : [];
-
-    $_updateParts = [];
-    $_updateParams = [];
-
-    foreach ($_varDefaults as $_vname => $_vval) {
-        $_safeVname = str_replace("`", "", $_vname);
-        $_updateParts[] = "`$_safeVname` = :v_$_safeVname";
-        $_updateParams["v_$_safeVname"] = $_vval;
-    }
-
-    foreach ($_tblDefaults as $_tname => $_tcols) {
-        $_safeTname = str_replace("`", "", $_tname);
-        $_initRow = [];
-        foreach ($_tcols as $_colName => $_colDefault) {
-            $_initRow[$_colName] = $_colDefault;
-        }
-        $_updateParts[] = "`$_safeTname` = :t_$_safeTname";
-        $_updateParams["t_$_safeTname"] = json_encode($_initRow, JSON_UNESCAPED_UNICODE);
-    }
-
-    if (!empty($_updateParts)) {
-        $_updateParams['newid'] = $_newUserId;
-        $_sqlInit = "UPDATE `user_data`.`$ConfigId` SET " . implode(', ', $_updateParts) . " WHERE id = :newid";
-        $_stmtInit = $_pdo->prepare($_sqlInit);
-        $_stmtInit->execute($_updateParams);
-    }
 
     echo json_encode([
         'code'     => 0,

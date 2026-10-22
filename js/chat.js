@@ -34,17 +34,17 @@ async function loadMsgList() {
     try {
         const _formData = new FormData();
         _formData.append('UserId', UserId);
-        const _res = await fetch('/chat/chat_list.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/chat/chat_list.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
 
         if (_data.code === 0 && _data.data.length > 0) {
   ListEl.innerHTML = _data.data.map(_item => `
     <div class="msg-item" onclick="parent.openChat('${_item.chat_id}')">
-                 <img src="${_item.is_group ? 'group_avatars/' + _item.avatar : 'avatars/' + _item.avatar}" 
+                 <img src="${escapeHtml((_item.is_group ? 'group_avatars/' : 'avatars/') + (_item.avatar || ''))}" 
                          class="msg-avatar" onerror="this.src='/images/icon.png'">
                     <div class="msg-info">
-                        <div class="msg-name">${_item.name}</div>
-                        <div class="msg-text">${_item.last_msg || '暂无消息'}</div>
+                        <div class="msg-name">${escapeHtml(_item.name || '')}</div>
+                        <div class="msg-text">${escapeHtml(_item.last_msg || '暂无消息')}</div>
                     </div>
                     ${_item.unread > 0 ? `<span class="msg-badge">${_item.unread}</span>` : ''}
                 </div>
@@ -61,6 +61,29 @@ function openChat(chatId) {
     console.log('Open chat:', chatId);
 }
 
+
+// 轻量刷新当前聊天（WebSocket 收到新消息时调用，不重载子页面）
+async function refreshCurrentChat() {
+    if (!CurrentChatId) return;
+    if (!document.getElementById('ChatMessages')) return;
+
+    const _formData = new FormData();
+    _formData.append('UserId', localStorage.getItem('UserId'));
+    _formData.append('ChatId', CurrentChatId);
+    _formData.append('Offset', '0');
+    _formData.append('Limit', String(ChatLimit));
+
+    try {
+        const _res = await apiFetch('/chat/chat_detail.php', { method: 'POST', body: _formData });
+        const _data = await _res.json();
+        if (_data.code === 0) {
+            ChatData = _data.data;
+            renderMessages(_data.data.Messages, _data.data.ReadList || {}, _data.data.IsGroup);
+            const _c = document.getElementById('ChatMessages');
+            if (_c) _c.scrollTop = _c.scrollHeight;
+        }
+    } catch (_err) {}
+}
 
 // ========== Chat Detail ==========
 let CurrentChatId = '';
@@ -80,7 +103,7 @@ async function openChatDetail(chatId) {
     _formData.append('Limit', String(ChatLimit));
 
     try {
-        const _res = await fetch('/chat/chat_detail.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/chat/chat_detail.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
 
         if (_data.code === 0) {
@@ -99,7 +122,7 @@ let ServerConfig = null;
 async function loadServerConfig() {
     if (ServerConfig) return ServerConfig;
     try {
-        const _res = await fetch('/admin/server_config_get.php');
+        const _res = await apiFetch('/admin/server_config_get.php');
         const _data = await _res.json();
         if (_data.code === 0) ServerConfig = _data.data;
         return ServerConfig;
@@ -215,7 +238,7 @@ else if (_vip === 'vip') senderColor = '#d4a017';
                 break;
             case 'Image':
                 if (msg.ImagePath) {
-                    body = `<img src="${msg.ImagePath}" class="msg-image" onerror="this.outerHTML='<div class=\\'msg-text\\' style=\\'color:#c84628;\\'>图片不存在</div>'">`;
+                    body = `<img src="${escapeHtml(msg.ImagePath)}" class="msg-image" onerror="this.outerHTML='<div class=\\'msg-text\\' style=\\'color:#c84628;\\'>图片不存在</div>'">`;
                 } else {
                     body = `<div class="msg-text" style="color:#c84628;">图片不存在</div>`;
                 }
@@ -243,20 +266,20 @@ else if (_vip === 'vip') senderColor = '#d4a017';
                             <span class="msg-studio-name">${escapeHtml(msg.StudioName || '')}</span>
                             <span class="msg-studio-id">${escapeHtml(msg.ConfigId || '')}</span>
                         </div>
-                        ${!isMine ? `<button class="msg-studio-btn ${isAlreadyIn ? 'done' : ''}" onclick="${isAlreadyIn ? '' : `parent.acceptStudio('${msg.ConfigId || ''}', '${msg.MsgId || ''}', '${(ChatData.ChatId || CurrentChatId || '')}')`}">${isAlreadyIn ? '已加入' : '加入'}</button>` : ''}
+                        ${!isMine ? `<button class="msg-studio-btn ${isAlreadyIn ? 'done' : ''}" onclick="${isAlreadyIn ? '' : `parent.acceptStudio('${escapeHtml(msg.ConfigId || '')}', '${escapeHtml(msg.MsgId || '')}', '${escapeHtml(ChatData.ChatId || CurrentChatId || '')}')`}">${isAlreadyIn ? '已加入' : '加入'}</button>` : ''}
                     </div>`;
                 break;
         }
 
         return `
             <div class="${rowClass}">
-                <img src="avatars/${senderAvatar}" class="msg-avatar" onerror="this.src='/images/icon.png'">
-                <div>
+                <img src="avatars/${escapeHtml(senderAvatar)}" class="msg-avatar" onerror="this.src='/images/icon.png'">
+                <div class="msg-col">
                     <div class="msg-bubble">
-           ${!isMine ? `<div style="font-size:11px;font-weight:600;color:${senderColor};margin-bottom:3px;">${senderName}</div>` : ''}  
+           ${!isMine ? `<div style="font-size:11px;font-weight:600;color:${senderColor};margin-bottom:3px;">${escapeHtml(senderName)}</div>` : ''}  
                         ${body}
                     </div>
-                    <div class="msg-time">${Time}</div>
+                    <div class="msg-time">${escapeHtml(Time)}</div>
                     ${isGroup && readCount > 0 ? `<div class="msg-read ${readCount <= 1 ? 'zero' : ''}" onclick="parent.showReadList('${MsgId}')">${readCount}人已读</div>` : ''}
                 </div>
             </div>`;
@@ -306,7 +329,7 @@ async function parentSendMsg(type, extraData) {
     }
 
     try {
-        const _res = await fetch('/chat/chat_send.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/chat/chat_send.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
         if (_data.code === 0) {
             CurrentOffset = 0;
@@ -351,7 +374,7 @@ async function handleImageSend(event) {
     _formData.append('Image', _file);
 
     try {
-        const _res = await fetch('/chat/chat_send.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/chat/chat_send.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
         if (_data.code === 0) {
             CurrentOffset = 0;
@@ -388,7 +411,7 @@ async function inviteStudioMenu() {
     _formData.append('UserId', UserId);
 
     try {
-        const _res = await fetch('/database/user_databases.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/database/user_databases.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
 
         if (_data.code === 0 && _data.data.length > 0) {
@@ -450,7 +473,7 @@ async function acceptCoin(msgId, type, num) {
     _formData.append('MsgId', msgId);
 
     try {
-        const _res = await fetch('/admin/coin_accept.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/admin/coin_accept.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
         if (_data.code === 0) {
             alert(`成功获得 ${_data.num} 金币！`);
@@ -476,7 +499,7 @@ async function acceptStudio(configId, msgId, chatId) {
     _formData.append('MsgId', msgId);
 
     try {
-        const _res = await fetch('/database/studio_join.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/database/studio_join.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
         if (_data.code === 0) {
             alert('加入成功！');

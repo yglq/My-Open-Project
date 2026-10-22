@@ -89,6 +89,9 @@ try {
     if (!$_card) throw new Exception('卡密不存在');
     if ($_card['used_at'] !== null) throw new Exception('卡密已被使用');
 
+    // 认领+发奖+写日志全在一个事务里：任何一步失败整体回滚，不会出现"奖发了但卡还能用"
+    $_pdo->beginTransaction();
+
     // 原子认领：仅当 used_at 仍为 NULL 时才能认领成功（防止并发重复兑换）
     $_claim = $_pdo->prepare(
         "UPDATE $_cardTable
@@ -135,6 +138,7 @@ try {
     } elseif ($_type === 3) {
         // 自定义变量：value 型累加，string 型替换
         $_varTypes = _parseVarTypes($_config['custom_vars'] ?? '[]');
+        $_sideVars = customVarGetAll($ConfigId, $_uid);
         $_valueList = json_decode($_card['value_list'] ?? '[]', true) ?: [];
         if (!is_array($_valueList)) throw new Exception('卡密奖励数据格式错误');
 
@@ -145,15 +149,10 @@ try {
             if (!array_key_exists($_varName, $_varTypes)) {
                 throw new Exception('自定义变量不存在：' . $_varName);
             }
-            // 列不存在则自动创建
-            $_colCheck = $_pdo->query("SHOW COLUMNS FROM `user_data`.`$_userTable` LIKE '$_varName'");
-            if ($_colCheck->rowCount() === 0) {
-                $_pdo->exec("ALTER TABLE `user_data`.`$_userTable` ADD COLUMN `$_varName` VARCHAR(255) DEFAULT '0'");
-            }
-
             if (($_varTypes[$_varName] ?? 'string') === 'value') {
-                // 数值累加
-                $_cur = is_numeric($_user[$_varName] ?? '') ? $_user[$_varName] : 0;
+                // 数值累加（侧表值 > 老列值兼容）
+                $_curRaw = $_sideVars[$_varName] ?? ($_user[$_varName] ?? 0);
+                $_cur = is_numeric($_curRaw) ? $_curRaw : 0;
                 $_newVal = floatval($_cur) + floatval($_varVal);
                 // 整数保持整数形式
                 if (is_int($_cur + 0) && is_int(floatval($_varVal) + 0) && strpos((string)$_varVal, '.') === false) {
@@ -164,8 +163,8 @@ try {
                 $_newVal = (string)$_varVal;
             }
 
-            $_stmtU = $_pdo->prepare("UPDATE `user_data`.`$_userTable` SET `$_varName` = :v WHERE id = :uid");
-            $_stmtU->execute(['v' => $_newVal, 'uid' => $_uid]);
+            customVarSet($ConfigId, $_uid, $_varName, $_newVal);
+            $_sideVars[$_varName] = (string)$_newVal;
             $_granted['vars'][] = ['name' => $_varName, 'value' => $_newVal];
         }
 
@@ -181,17 +180,19 @@ try {
             $_val = $_item['value'] ?? null;
             if ($_tbl === '' || $_col === '') continue;
 
-            // JSON 列不存在则自动创建
-            $_colCheck = $_pdo->query("SHOW COLUMNS FROM `user_data`.`$_userTable` LIKE '$_tbl'");
-            if ($_colCheck->rowCount() === 0) {
-                $_pdo->exec("ALTER TABLE `user_data`.`$_userTable` ADD COLUMN `$_tbl` JSON DEFAULT NULL");
+            // 读取该行 JSON 表的首行对象（老列 JSON 回退），按 key 合并
+            $_rows = customTableRows($ConfigId, $_uid, $_tbl);
+            if (empty($_rows)) {
+                $_stmtJ = $_pdo->prepare("SELECT `$_tbl` FROM `user_data`.`$_userTable` WHERE id = :uid");
+                $_stmtJ->execute(['uid' => $_uid]);
+                $_raw = $_stmtJ->fetchColumn();
+                $_legacy = $_raw !== null ? json_decode($_raw, true) : [];
+                if (is_array($_legacy)) {
+                    if (!empty($_legacy) && array_keys($_legacy) !== range(0, count($_legacy) - 1)) $_legacy = [$_legacy];
+                    $_rows = $_legacy;
+                }
             }
-
-            // 读取当前对象
-            $_stmtJ = $_pdo->prepare("SELECT `$_tbl` FROM `user_data`.`$_userTable` WHERE id = :uid");
-            $_stmtJ->execute(['uid' => $_uid]);
-            $_raw = $_stmtJ->fetchColumn();
-            $_cur = ($_raw !== null) ? json_decode($_raw, true) : [];
+            $_cur = $_rows[0] ?? [];
             if (!is_array($_cur)) $_cur = [];
 
             // 按 key 合并（数值累加，其余替换）
@@ -205,8 +206,8 @@ try {
                 $_cur[$_col] = $_val;
             }
 
-            $_stmtU = $_pdo->prepare("UPDATE `user_data`.`$_userTable` SET `$_tbl` = :j WHERE id = :uid");
-            $_stmtU->execute(['j' => json_encode($_cur, JSON_UNESCAPED_UNICODE), 'uid' => $_uid]);
+            $_rows[0] = $_cur;
+            customTableReplace($ConfigId, $_uid, $_tbl, $_rows);
             $_granted['json'][] = ['table' => $_tbl, 'col' => $_col, 'value' => $_cur[$_col]];
         }
 
@@ -252,6 +253,8 @@ try {
     $_stmtCU = $_pdo->prepare("UPDATE admin_config SET redeem_log = :log WHERE config_id = :cid");
     $_stmtCU->execute(['log' => json_encode($_cfgLog, JSON_UNESCAPED_UNICODE), 'cid' => $ConfigId]);
 
+    $_pdo->commit();
+
     echo json_encode([
         'code'    => 0,
         'message' => '兑换成功',
@@ -260,17 +263,9 @@ try {
     ], JSON_UNESCAPED_UNICODE);
 
 } catch (Exception $e) {
-    // 若已认领但后续发奖/写日志失败，回滚认领状态，避免卡密被吃掉
-    if (isset($_claimed) && $_claimed && isset($_pdo) && isset($Code) && isset($_uid)) {
-        try {
-            $_cardTable = "`card_data`.`{$ConfigId}_cardkey`";
-            $_rb = $_pdo->prepare(
-                "UPDATE $_cardTable
-                 SET used_at = NULL, used_by = NULL, used_username = NULL, used_ip = NULL
-                 WHERE code = :code AND used_by = :uid"
-            );
-            $_rb->execute(['code' => $Code, 'uid' => $_uid]);
-        } catch (Exception $ignored) {}
+    // 事务内任何一步失败：整体回滚，认领状态和已发奖励一起撤掉
+    if (isset($_pdo) && $_pdo->inTransaction()) {
+        try { $_pdo->rollBack(); } catch (Exception $ignored) {}
     }
     http_response_code(400);
     apiError($e);

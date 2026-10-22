@@ -63,23 +63,26 @@ try {
     $_user = $_stmt2->fetch();
     if (!$_user) throw new Exception('子用户不存在');
 
-    // custom_vars 取值，优先取实际值，没有则取默认值
+    // custom_vars：侧表值 > 老列值 > 默认值
+    $_sideVars = customVarGetAll($ConfigId, $SubUserId);
     $_customVars = [];
     foreach ($_varNames as $_name) {
         $_defaultVal = $_defaultsVars[$_name] ?? '0';
-        $_customVars[$_name] = $_user[$_name] !== null && $_user[$_name] !== '' ? $_user[$_name] : $_defaultVal;
+        $_v = $_sideVars[$_name] ?? ($_user[$_name] ?? null);
+        $_customVars[$_name] = ($_v !== null && $_v !== '') ? $_v : $_defaultVal;
     }
 
-    // custom_tables
+    // custom_tables：侧表行 > 老列 JSON（兼容旧数据）
     $_customTables = [];
     foreach ($_tblDefs as $_tblName => $_cols) {
-        $_raw = $_user[$_tblName] ?? null;
-        $_decoded = $_raw ? json_decode($_raw, true) : [];
-        // 兼容：若列里存的是单个对象(关联数组)，包装成 [对象] 供前端按行渲染
-        if (is_array($_decoded) && !empty($_decoded)) {
-            $_keys = array_keys($_decoded);
-            $_isList = ($_keys === range(0, count($_decoded) - 1));
-            if (!$_isList) $_decoded = [$_decoded];
+        $_decoded = customTableRows($ConfigId, $SubUserId, $_tblName);
+        if (empty($_decoded) && !empty($_user[$_tblName])) {
+            $_legacy = json_decode($_user[$_tblName], true);
+            if (is_array($_legacy) && !empty($_legacy)) {
+                $_keys = array_keys($_legacy);
+                if ($_keys !== range(0, count($_legacy) - 1)) $_legacy = [$_legacy];
+                $_decoded = $_legacy;
+            }
         }
         $_customTables[$_tblName] = [
             'columns' => $_cols,

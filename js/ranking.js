@@ -14,7 +14,7 @@ async function loadVarRanking() {
     _f.append('ConfigId', ConfigId);
     _f.append('Tokey', Tokey);
     _f.append('Page', '1'); _f.append('PageSize', '9999');
-    const _r = await fetch('/sub_user/sub_users_list.php', { method: 'POST', body: _f });
+    const _r = await apiFetch('/sub_user/sub_users_list.php', { method: 'POST', body: _f });
     const _d = await _r.json();
     if (_d.code !== 0 || !_d.data.length) { el.innerHTML = '<div class="empty-text">暂无子用户数据</div>'; return; }
 
@@ -35,7 +35,7 @@ async function loadVarRanking() {
             _df.append('ConfigId', ConfigId);
             _df.append('Tokey', Tokey);
             _df.append('SubUserId', u.id);
-            const _dr = await fetch('/sub_user/sub_user_detail.php', { method: 'POST', body: _df });
+            const _dr = await apiFetch('/sub_user/sub_user_detail.php', { method: 'POST', body: _df });
             const _dd = await _dr.json();
             if (_dd.code === 0) {
                 userDetails.push({ ...u, custom_vars: _dd.data.custom_vars || {} });
@@ -80,7 +80,7 @@ function loadTableRanking() {
             <div class="table-detail" id="tableDetail_${name}" style="display:none; margin-top:8px; padding: 8px; background:#faf7f2; border-radius: 8px; font-size: 12px;">
                 ${(tables[name] || []).length > 0 ? 
                     `<div class="card-title" style="font-size:12px;">列定义</div>
-                    ${tables[name].map(col => `<div class="empty-text" style="margin-left:12px;">• ${col}</div>`).join('')}
+                    ${tables[name].map(col => `<div class="empty-text" style="margin-left:12px;">• ${escapeHtml(col)}</div>`).join('')}
                     <div class="card-title" style="font-size:12px; margin-top:8px;">数据预览</div>
                     <div class="empty-text">点击"更多"查看完整数据</div>
                     <span class="rank-more" onclick="parent.loadSubPage('Home_Admin_Custom_Ranking_TableDetail.html');parent.setTableDetail('${name}')" style="font-size:11px;">更多 ›</span>`
@@ -106,7 +106,7 @@ async function getCustomConfig() {
     _f.append('UserId', localStorage.getItem('UserId'));
     _f.append('ConfigId', ConfigId);
     _f.append('Tokey', Tokey);
-    const _r = await fetch('/admin/admin_config_get.php', { method: 'POST', body: _f });
+    const _r = await apiFetch('/admin/admin_config_get.php', { method: 'POST', body: _f });
     const _d = await _r.json();
     return _d.code === 0 ? _d.data : null;
 }
@@ -127,7 +127,7 @@ async function setVarDetail(varName) {
         _f.append('ConfigId', ConfigId);
         _f.append('Tokey', Tokey);
         _f.append('Page', '1'); _f.append('PageSize', '9999');
-        const _r = await fetch('/sub_user/sub_users_list.php', { method: 'POST', body: _f });
+        const _r = await apiFetch('/sub_user/sub_users_list.php', { method: 'POST', body: _f });
         const _d = await _r.json();
         if (_d.code !== 0 || !_d.data.length) { listEl.innerHTML = '<div class="empty-text">暂无数据</div>'; return; }
 
@@ -142,7 +142,7 @@ async function setVarDetail(varName) {
                 _df.append('ConfigId', ConfigId);
                 _df.append('Tokey', Tokey);
                 _df.append('SubUserId', u.id);
-                const _dr = await fetch('/sub_user/sub_user_detail.php', { method: 'POST', body: _df });
+                const _dr = await apiFetch('/sub_user/sub_user_detail.php', { method: 'POST', body: _df });
                 const _dd = await _dr.json();
                 if (_dd.code === 0) {
                     userDetails.push({
@@ -184,7 +184,7 @@ async function setTableDetail(tableName) {
         _f.append('ConfigId', ConfigId);
         _f.append('Tokey', Tokey);
         _f.append('Page', '1'); _f.append('PageSize', '9999');
-        const _r = await fetch('/sub_user/sub_users_list.php', { method: 'POST', body: _f });
+        const _r = await apiFetch('/sub_user/sub_users_list.php', { method: 'POST', body: _f });
         const _d = await _r.json();
         if (_d.code !== 0 || !_d.data.length) { listEl.innerHTML = '<div class="empty-text">暂无数据</div>'; return; }
 
@@ -201,7 +201,7 @@ async function setTableDetail(tableName) {
                 _df.append('ConfigId', ConfigId);
                 _df.append('Tokey', Tokey);
                 _df.append('SubUserId', u.id);
-                const _dr = await fetch('/sub_user/sub_user_detail.php', { method: 'POST', body: _df });
+                const _dr = await apiFetch('/sub_user/sub_user_detail.php', { method: 'POST', body: _df });
                 const _dd = await _dr.json();
                 
                 let tableData = [];
@@ -214,7 +214,7 @@ async function setTableDetail(tableName) {
                 if (rowCount > 0) {
                     rowsHtml = tableData.map((row, ri) => `
                         <div style="margin-left:16px;font-size:11px;color:#8b7355;">
-                            行${ri + 1}: ${cols.map(c => `${c}=${row[c] || '-'}`).join(', ')}
+                            行${ri + 1}: ${escapeHtml(cols.map(c => `${c}=${row[c] || '-'}`).join(', '))}
                         </div>`).join('');
                 }
                 

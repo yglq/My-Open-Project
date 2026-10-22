@@ -10,7 +10,7 @@
         _formData.append('UserId', UserId);
 
         try {
-            const _res = await fetch('/admin/admin_databases.php', { method: 'POST', body: _formData });
+            const _res = await apiFetch('/admin/admin_databases.php', { method: 'POST', body: _formData });
             const _data = await _res.json();
 
             if (_data.code === 0 && _data.list.length > 0) {
@@ -48,7 +48,7 @@ async function loadConfig() {
         _formData.append('UserId', UserId);
         _formData.append('ConfigId', configId);
         _formData.append('Tokey', tokey);
-        const _res = await fetch('/admin/admin_config_get.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/admin/admin_config_get.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
 
         if (_data.code === 0) {
@@ -80,6 +80,7 @@ async function loadConfig() {
             setVal('ServerStatus', _c.server_status);
             setToggle('ApiTokenSwitch', _c.api_token_switch);
             setVal('ApiToken', _c.api_token);
+            setVal('Tokey', _c.tokey || '');
             setToggle('SubPwdHash', _c.sub_pwd_hash);
         }
     } catch (_err) {
@@ -137,10 +138,11 @@ async function saveConfig() {
     _formData.append('server_status', getVal('ServerStatus'));
     _formData.append('api_token_switch', getToggle('ApiTokenSwitch'));
     _formData.append('api_token', getVal('ApiToken'));
+    _formData.append('tokey', getVal('Tokey'));
     _formData.append('sub_pwd_hash', getToggle('SubPwdHash'));
 
     try {
-        const _res = await fetch('/admin/admin_config_save.php', { method: 'POST', body: _formData });
+        const _res = await apiFetch('/admin/admin_config_save.php', { method: 'POST', body: _formData });
         const _data = await _res.json();
         if (_data.code === 0) {
             Toast.className = 'toast-inline success';

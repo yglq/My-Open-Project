@@ -3,6 +3,7 @@
  * 修改指定自定义变量
  * 仅支持 POST
  * 参数: ConfigId, ApiToken, Username, Password, VarName, Value
+ * 存储：user_data.{ConfigId}_vars 侧表，不再改子用户主表结构
  */
 
 require_once __DIR__ . '/../../lib/db.php';
@@ -33,10 +34,15 @@ try {
 
     validateApiToken($ConfigId, $ApiToken);
 
-    // 验证变量名是否在 custom_vars 中
-    $_customVars = parseCustomVarNames($_config['custom_vars'] ?? '[]');
-    if (!in_array($VarName, $_customVars)) throw new Exception('变量名不存在：' . $VarName);
-    $_safeVar = _safeIdent($VarName);
+    // 验证变量名是否在 custom_vars 中 + 类型检查
+    $_varDefs = json_decode($_config['custom_vars'] ?? '[]', true) ?: [];
+    $_varType = null;
+    foreach ($_varDefs as $_vd) {
+        $_n = is_array($_vd) ? ($_vd['name'] ?? '') : $_vd;
+        if ($_n === $VarName) { $_varType = is_array($_vd) ? ($_vd['type'] ?? 'value') : 'value'; break; }
+    }
+    if ($_varType === null) throw new Exception('变量名不存在：' . $VarName);
+    if ($_varType === 'value' && !is_numeric($Value)) throw new Exception('该变量是数值类型，Value 必须是数字');
 
     // 验证子用户
     $_stmt2 = $_pdo->prepare("SELECT id, password FROM `user_data`.`$ConfigId` WHERE username = :uname LIMIT 1");
@@ -45,16 +51,8 @@ try {
     if (!$_user) throw new Exception('账号不存在');
     if (!verifyPwd($Password, $_user['password'])) throw new Exception('密码错误');
 
-    // 检查列是否存在，不存在则自动创建
-    $_stmtCol = $_pdo->query("SHOW COLUMNS FROM `user_data`.`$ConfigId` LIKE '$_safeVar'");
-    if ($_stmtCol->rowCount() === 0) {
-        $_alterSQL = "ALTER TABLE `user_data`.`$ConfigId` ADD COLUMN `$_safeVar` VARCHAR(255) DEFAULT '0'";
-        $_pdo->exec($_alterSQL);
-    }
-
-    // 更新
-    $_stmt3 = $_pdo->prepare("UPDATE `user_data`.`$ConfigId` SET `$_safeVar` = :val WHERE id = :uid");
-    $_stmt3->execute(['val' => $Value, 'uid' => $_user['id']]);
+    // 写入侧表（upsert）
+    customVarSet($ConfigId, $_user['id'], $VarName, $Value);
 
     echo json_encode(['code' => 0, 'message' => '更新成功'], JSON_UNESCAPED_UNICODE);
 

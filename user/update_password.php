@@ -28,7 +28,10 @@ try {
     $_stmt = $_pdo->prepare("UPDATE users SET password = :pwd WHERE user_id = :uid");
 $_stmt->execute(['pwd' => hashPwd($NewPassword), 'uid' => $UserId]);
 
-    echo json_encode(['code' => 0, 'message' => 'ok'], JSON_UNESCAPED_UNICODE);
+    // 改密后轮换会话令牌，踢掉其他端
+    $_sessionToken = issueSessionToken($UserId);
+
+    echo json_encode(['code' => 0, 'message' => '修改成功', 'sessionToken' => $_sessionToken], JSON_UNESCAPED_UNICODE);
 } catch (Exception $e) {
     http_response_code(400);
     apiError($e);

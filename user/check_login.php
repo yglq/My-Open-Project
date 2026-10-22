@@ -12,14 +12,15 @@ try {
     requirePost();
 
     $UserId = intval($_POST['UserId'] ?? 0);
+    $SessionToken = trim($_POST['SessionToken'] ?? '');
     $Password = $_POST['Password'] ?? '';
 
-    if ($UserId <= 0 || $Password === '') {
+    if ($UserId <= 0 || ($SessionToken === '' && $Password === '')) {
         throw new Exception('参数错误');
     }
 
     $_pdo = GetPDO();
-    $_stmt = $_pdo->prepare("SELECT user_id, password, status FROM users WHERE user_id = :uid LIMIT 1");
+    $_stmt = $_pdo->prepare("SELECT user_id, password, session_token, status FROM users WHERE user_id = :uid LIMIT 1");
     $_stmt->execute(['uid' => $UserId]);
     $_user = $_stmt->fetch();
 
@@ -33,8 +34,12 @@ try {
         throw new Exception('账号已被封禁');
     }
 
-    // 密码不对（被改了）
-    if (!verifyPwd($Password, $_user['password'])) {
+    // 优先会话令牌；无令牌时兼容旧密码校验
+    if ($SessionToken !== '') {
+        if (!hash_equals((string)$_user['session_token'], $SessionToken)) {
+            throw new Exception('登录状态已失效，请重新登录');
+        }
+    } elseif (!verifyPwd($Password, $_user['password'])) {
         throw new Exception('密码已变更');
     }
 

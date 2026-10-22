@@ -14,3 +14,9 @@ Thumbs.db
 *.log
 tools/deploy.token
 tools/deploy.dbpass
+backups/
+tools/ws_internal.token
+tools/ws_server.pid
+tools/ws.log
+backups/
+tools/secrets.php

@@ -5,6 +5,7 @@ header('Content-Type: application/json; charset=utf-8');
 try {
 
     requirePost();
+    authUser();
     $UserId   = intval($_POST['UserId'] ?? 0);
     $ConfigId = trim($_POST['ConfigId'] ?? '');
     $Tokey    = trim($_POST['Tokey'] ?? '');
@@ -13,28 +14,41 @@ try {
 
     $_pdo = GetPDO();
 
-    // 查询所有 registry，遍历 table_data 找到匹配的项
-    $_stmt = $_pdo->query("SELECT id, user_id, table_data FROM data_tables_registry");
-    $_all = $_stmt->fetchAll();
+    // Tokey 从 admin_config.tokey 直查（不再全表扫 JSON）
+    $_stmtC = $_pdo->prepare("SELECT user_id, tokey FROM admin_config WHERE config_id = :cid LIMIT 1");
+    $_stmtC->execute(['cid' => $ConfigId]);
+    $_cred = $_stmtC->fetch();
 
-    $_matchedOwnerId = null;
-    $_dbName         = '';
-    $_actualTokey    = null;
-
-    foreach ($_all as $_row) {
-        $_data = json_decode($_row['table_data'] ?? '[]', true) ?: [];
-        foreach ($_data as $_item) {
-            if (($_item['table'] ?? '') === $ConfigId) {
-                $_matchedOwnerId = $_row['user_id'];
-                $_dbName = $_item['name'] ?? '';
-                $_actualTokey = $_item['tokey'] ?? '';
-                break 2;
+    if ($_cred && $_cred['tokey'] !== '') {
+        $_matchedOwnerId = intval($_cred['user_id']);
+        $_actualTokey    = $_cred['tokey'];
+        if (!hash_equals($_actualTokey, $Tokey)) throw new Exception('密钥错误');
+    } else {
+        // 兼容未迁移的旧库：JSON_SEARCH 定位包含该 ConfigId 的行
+        $_stmt = $_pdo->prepare("SELECT user_id, table_data FROM data_tables_registry WHERE JSON_SEARCH(table_data, 'one', :cid, NULL, '$[*].table') IS NOT NULL");
+        $_stmt->execute(['cid' => $ConfigId]);
+        $_matchedOwnerId = null;
+        $_actualTokey = null;
+        foreach ($_stmt->fetchAll() as $_row) {
+            $_data = json_decode($_row['table_data'] ?? '[]', true) ?: [];
+            foreach ($_data as $_item) {
+                if (($_item['table'] ?? '') === $ConfigId) {
+                    $_matchedOwnerId = $_row['user_id'];
+                    $_actualTokey = $_item['tokey'] ?? '';
+                    break 2;
+                }
             }
         }
+        if (!$_matchedOwnerId) throw new Exception('数据库不存在');
+        if ($_actualTokey !== $Tokey) throw new Exception('密钥错误');
     }
 
-    if (!$_matchedOwnerId) throw new Exception('数据库不存在');
-    if ($_actualTokey !== $Tokey) throw new Exception('密钥错误');
+    $_dbName = '';
+    $_stmtN = $_pdo->prepare("SELECT table_data FROM data_tables_registry WHERE user_id = :uid LIMIT 1");
+    $_stmtN->execute(['uid' => $_matchedOwnerId]);
+    foreach ((json_decode($_stmtN->fetchColumn(), true) ?: []) as $_item) {
+        if (($_item['table'] ?? '') === $ConfigId) { $_dbName = $_item['name'] ?? ''; break; }
+    }
 
     // 检查是否已经加入
     $_stmt2 = $_pdo->prepare("SELECT table_data FROM data_tables_registry WHERE user_id = :uid");

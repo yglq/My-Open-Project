@@ -73,31 +73,141 @@ function randomString($_length, $_type = 'all') {
 // ApiToken: 调用方传入的 token
 // 说明：当 api_token_switch=1 时验证，否则跳过
 function validateApiToken($ConfigId, $ApiToken) {
+    if (!preg_match('/^[A-Za-z0-9_]{1,64}$/', (string)$ConfigId)) throw new Exception('ConfigId 非法');
     $_pdo = GetPDO();
     $_stmt = $_pdo->prepare("SELECT api_token, api_token_switch FROM admin_config WHERE config_id = :cid LIMIT 1");
     $_stmt->execute(['cid' => $ConfigId]);
     $_config = $_stmt->fetch();
     if (!$_config) throw new Exception('配置不存在');
     if (intval($_config['api_token_switch'] ?? 0) === 1) {
-        if ($_config['api_token'] !== $ApiToken) throw new Exception('ApiToken 错误');
+        if (!hash_equals((string)$_config['api_token'], (string)$ApiToken)) throw new Exception('ApiToken 错误');
     }
 }
 
 // 验证 Tokey：用于后台管理接口（级别 3）
-// UserId: 主用户 ID
-// ConfigId: 数据库标识
-// Tokey: 数据库密钥
+// UserId: 主用户 ID；ConfigId: 数据库标识；Tokey: 该库的独立密钥
+// 密钥本体存 db_credentials 表（O(1) 索引查找），registry JSON 只判断用户是否是该库成员
 function validateTokey($UserId, $ConfigId, $Tokey) {
+    if (!preg_match('/^[A-Za-z0-9_]{1,64}$/', (string)$ConfigId)) throw new Exception('ConfigId 非法');
     $_pdo = GetPDO();
-    $_stmt = $_pdo->prepare("SELECT table_data FROM data_tables_registry WHERE user_id = :uid");
-    $_stmt->execute(['uid' => $UserId]);
-    $_data = json_decode($_stmt->fetchColumn(), true) ?: [];
-    foreach ($_data as $_item) {
-        if (($_item['table'] ?? '') === $ConfigId && ($_item['tokey'] ?? '') === $Tokey) {
-            return;
+    if (!dbTokeyMatch($_pdo, $ConfigId, $Tokey)) throw new Exception('Tokey 验证失败');
+    // 成员身份：该用户的 registry 里必须挂着这个库
+    $_stmt = $_pdo->prepare(
+        "SELECT 1 FROM data_tables_registry WHERE user_id = :uid
+         AND JSON_SEARCH(table_data, 'one', :cid, NULL, '$[*].table') IS NOT NULL LIMIT 1"
+    );
+    $_stmt->execute(['uid' => $UserId, 'cid' => $ConfigId]);
+    if (!$_stmt->fetchColumn()) throw new Exception('Tokey 验证失败');
+}
+
+// Tokey 比对：查 admin_config.tokey（配置页可查看/修改）；查不到时回退 registry JSON（迁移前兼容）
+function dbTokeyMatch(PDO $_pdo, $ConfigId, $Tokey) {
+    $_stmt = $_pdo->prepare("SELECT tokey FROM admin_config WHERE config_id = :cid LIMIT 1");
+    $_stmt->execute(['cid' => $ConfigId]);
+    $_real = $_stmt->fetchColumn();
+    if ($_real !== false && $_real !== null && $_real !== '') {
+        return hash_equals((string)$_real, (string)$Tokey);
+    }
+    $_stmt2 = $_pdo->prepare(
+        "SELECT table_data FROM data_tables_registry
+         WHERE JSON_SEARCH(table_data, 'one', :cid, NULL, '$[*].table') IS NOT NULL"
+    );
+    $_stmt2->execute(['cid' => $ConfigId]);
+    foreach ($_stmt2->fetchAll() as $_row) {
+        foreach ((json_decode($_row['table_data'], true) ?: []) as $_item) {
+            if (($_item['table'] ?? '') === $ConfigId && hash_equals((string)($_item['tokey'] ?? ''), (string)$Tokey)) {
+                return true;
+            }
         }
     }
-    throw new Exception('Tokey 验证失败');
+    return false;
+}
+
+// 签发主用户会话令牌（登录时调用），返回明文 token 并写库
+function issueSessionToken($UserId) {
+    $_token = bin2hex(random_bytes(24)); // 48 字符
+    $_pdo = GetPDO();
+    $_stmt = $_pdo->prepare("UPDATE users SET session_token = :t WHERE user_id = :uid");
+    $_stmt->execute(['t' => $_token, 'uid' => $UserId]);
+    return $_token;
+}
+
+// 校验主用户会话令牌
+function validateSessionToken($UserId, $SessionToken) {
+    if ($SessionToken === '') return false;
+    $_pdo = GetPDO();
+    $_stmt = $_pdo->prepare("SELECT session_token FROM users WHERE user_id = :uid LIMIT 1");
+    $_stmt->execute(['uid' => $UserId]);
+    $_stored = $_stmt->fetchColumn();
+    return $_stored !== false && $_stored !== null && $_stored !== ''
+        && hash_equals($_stored, $SessionToken);
+}
+
+// 控制台接口统一鉴权：UserId + SessionToken（兼容回退 Password）
+// 从 $_POST 取参；校验通过返回 user_id，否则抛异常
+function authUser() {
+    $_userId = intval($_POST['UserId'] ?? 0);
+    if ($_userId <= 0) throw new Exception('参数错误：UserId 必填');
+
+    $_pdo = GetPDO();
+    $_stmt = $_pdo->prepare("SELECT password, session_token, status FROM users WHERE user_id = :uid LIMIT 1");
+    $_stmt->execute(['uid' => $_userId]);
+    $_user = $_stmt->fetch();
+    if (!$_user) throw new Exception('用户不存在');
+    if ((int)$_user['status'] === 1) throw new Exception('账号已被封禁');
+
+    // 优先会话令牌；无令牌时兼容旧密码校验
+    $_token = $_POST['SessionToken'] ?? '';
+    if ($_token !== '') {
+        if (hash_equals((string)$_user['session_token'], $_token)) return $_userId;
+        throw new Exception('登录状态已失效，请重新登录');
+    }
+    $_pwd = $_POST['Password'] ?? '';
+    if ($_pwd !== '' && verifyPwd($_pwd, $_user['password'])) return $_userId;
+
+    throw new Exception('未登录或凭证无效');
+}
+
+// 简单限流：同一 IP+端点 在窗口期内超过次数则拒绝
+// 用法：rateLimit('user/login', 5, 60) → 每分钟最多 5 次
+function rateLimit($endpoint, $maxCount = 10, $windowSec = 60) {
+    $_pdo = GetPDO();
+    // 表按需自建，无迁移成本
+    $_pdo->exec("CREATE TABLE IF NOT EXISTS rate_limit (
+        `endpoint` VARCHAR(64) NOT NULL,
+        `ip` VARCHAR(45) NOT NULL,
+        `window_start` INT UNSIGNED NOT NULL,
+        `count` INT UNSIGNED NOT NULL DEFAULT 0,
+        PRIMARY KEY (endpoint, ip)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    $_ip = getClientIp();
+    $_now = time();
+    $_win = $_now - ($_now % $windowSec);
+
+    $_pdo->beginTransaction();
+    try {
+        $_stmt = $_pdo->prepare("SELECT window_start, count FROM rate_limit WHERE endpoint = :ep AND ip = :ip FOR UPDATE");
+        $_stmt->execute(['ep' => $endpoint, 'ip' => $_ip]);
+        $_row = $_stmt->fetch();
+
+        if (!$_row || (int)$_row['window_start'] !== $_win) {
+            $_stmt2 = $_pdo->prepare("REPLACE INTO rate_limit (endpoint, ip, window_start, count) VALUES (:ep, :ip, :w, 1)");
+            $_stmt2->execute(['ep' => $endpoint, 'ip' => $_ip, 'w' => $_win]);
+            $_pdo->commit();
+            return;
+        }
+        if ((int)$_row['count'] >= $maxCount) {
+            $_pdo->commit();
+            throw new Exception('请求过于频繁，请稍后再试');
+        }
+        $_stmt3 = $_pdo->prepare("UPDATE rate_limit SET count = count + 1 WHERE endpoint = :ep AND ip = :ip");
+        $_stmt3->execute(['ep' => $endpoint, 'ip' => $_ip]);
+        $_pdo->commit();
+    } catch (Exception $e) {
+        if ($_pdo->inTransaction()) $_pdo->rollBack();
+        throw $e;
+    }
 }
 
 // ========== 公共工具函数 ==========
@@ -153,43 +263,122 @@ function createSubUserTable($tableName) {
     $_pdo->exec($_createSQL);
 }
 
-// 确保子用户表中存在自定义变量列与自定义 JSON 列（不存在则自动创建）
-// $customVarsJson:        admin_config.custom_vars        -> [{"name":"value1","type":"value"}, ...]
-// $customVarsDefJson:     admin_config.custom_vars_defaults -> {"value1":0, ...}
-// $customTblDefJson:      admin_config.custom_table_defaults -> {"tblName":{"col":default}, ...}
-function ensureCustomColumns($ConfigId, $customVarsJson, $customVarsDefJson, $customTblDefJson) {
+// ==================== 自定义变量 / JSON 表存储 ====================
+// 新架构：不再往子用户主表 ALTER 加列，数据放两张租户侧表：
+//   user_data.{ConfigId}_vars : user_id + var_name 一行一个变量（EAV）
+//   user_data.{ConfigId}_json : 一行 = JSON 表的一条记录（row_data JSON）
+// 好处：加/删/改变量不用动表结构；可按 var_name/table_name 索引查询；
+// JSON 表一行一记录，可追加/删除/分页，不再整列 blob 读改写。
+
+function _varsTable($ConfigId) { return "`user_data`.`" . _safeIdent($ConfigId) . "_vars`"; }
+function _jsonTable($ConfigId) { return "`user_data`.`" . _safeIdent($ConfigId) . "_json`"; }
+
+// 按需建侧表（CREATE IF NOT EXISTS 幂等，随便调用）
+function ensureVarStore($ConfigId) {
+    GetPDO()->exec("CREATE TABLE IF NOT EXISTS " . _varsTable($ConfigId) . " (
+        `user_id` INT UNSIGNED NOT NULL,
+        `var_name` VARCHAR(64) NOT NULL,
+        `var_value` TEXT NOT NULL,
+        PRIMARY KEY (user_id, var_name),
+        KEY idx_var_name (var_name)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+}
+function ensureJsonStore($ConfigId) {
+    GetPDO()->exec("CREATE TABLE IF NOT EXISTS " . _jsonTable($ConfigId) . " (
+        `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        `user_id` INT UNSIGNED NOT NULL,
+        `table_name` VARCHAR(64) NOT NULL,
+        `row_data` JSON NOT NULL,
+        KEY idx_user_table (user_id, table_name)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+}
+
+// 读取某子用户全部自定义变量：name => value
+function customVarGetAll($ConfigId, $userId) {
+    ensureVarStore($ConfigId);
+    $_s = GetPDO()->prepare("SELECT var_name, var_value FROM " . _varsTable($ConfigId) . " WHERE user_id = :u");
+    $_s->execute(['u' => $userId]);
+    return $_s->fetchAll(PDO::FETCH_KEY_PAIR) ?: [];
+}
+
+// 读取多个子用户的自定义变量：user_id => [name => value]
+function customVarGetBatch($ConfigId, array $userIds) {
+    if (empty($userIds)) return [];
+    ensureVarStore($ConfigId);
+    $_in = implode(',', array_map('intval', $userIds));
+    $_s = GetPDO()->query("SELECT user_id, var_name, var_value FROM " . _varsTable($ConfigId) . " WHERE user_id IN ($_in)");
+    $_out = [];
+    foreach ($_s->fetchAll() as $_r) $_out[$_r['user_id']][$_r['var_name']] = $_r['var_value'];
+    return $_out;
+}
+
+// 写单个自定义变量（存在即更新）
+function customVarSet($ConfigId, $userId, $varName, $value) {
+    ensureVarStore($ConfigId);
+    $_s = GetPDO()->prepare("INSERT INTO " . _varsTable($ConfigId) . " (user_id, var_name, var_value)
+        VALUES (:u, :n, :v) ON DUPLICATE KEY UPDATE var_value = VALUES(var_value)");
+    $_s->execute(['u' => $userId, 'n' => $varName, 'v' => (string)$value]);
+}
+
+// 读取某子用户某 JSON 表的全部行（关联数组数组）
+function customTableRows($ConfigId, $userId, $tableName) {
+    ensureJsonStore($ConfigId);
+    $_s = GetPDO()->prepare("SELECT row_data FROM " . _jsonTable($ConfigId) . " WHERE user_id = :u AND table_name = :t ORDER BY id");
+    $_s->execute(['u' => $userId, 't' => $tableName]);
+    $_rows = [];
+    foreach ($_s->fetchAll(PDO::FETCH_COLUMN) as $_j) {
+        $_d = json_decode($_j, true);
+        if (is_array($_d)) $_rows[] = $_d;
+    }
+    return $_rows;
+}
+
+// 整表替换（事务：删旧行 + 批量插入新行）
+function customTableReplace($ConfigId, $userId, $tableName, array $rows) {
+    ensureJsonStore($ConfigId);
     $_pdo = GetPDO();
-    $_safeTbl = preg_replace('/[^A-Za-z0-9_]/', '', (string)$ConfigId);
-    $_tbl = "`user_data`.`{$_safeTbl}`";
-
-    $_names = [];
-    // 来自 custom_vars 定义
-    $_vars = json_decode($customVarsJson ?: '[]', true) ?: [];
-    foreach ($_vars as $_v) {
-        if (is_array($_v)) $_names[] = preg_replace('/[^A-Za-z0-9_]/', '', (string)($_v['name'] ?? ''));
-    }
-    // 来自 custom_vars_defaults 的 key
-    $_def = json_decode($customVarsDefJson ?: '[]', true) ?: [];
-    foreach ($_def as $_k => $_v) $_names[] = preg_replace('/[^A-Za-z0-9_]/', '', (string)$_k);
-    $_names = array_unique(array_filter($_names));
-
-    foreach ($_names as $_n) {
-        $_chk = $_pdo->query("SHOW COLUMNS FROM {$_tbl} LIKE '{$_n}'");
-        if ($_chk->rowCount() === 0) {
-            $_pdo->exec("ALTER TABLE {$_tbl} ADD COLUMN `{$_n}` VARCHAR(255) DEFAULT '0'");
+    $_tbl = _jsonTable($ConfigId);
+    $_pdo->beginTransaction();
+    try {
+        $_pdo->prepare("DELETE FROM $_tbl WHERE user_id = :u AND table_name = :t")
+             ->execute(['u' => $userId, 't' => $tableName]);
+        $_ins = $_pdo->prepare("INSERT INTO $_tbl (user_id, table_name, row_data) VALUES (:u, :t, :r)");
+        foreach ($rows as $_row) {
+            $_ins->execute(['u' => $userId, 't' => $tableName, 'r' => json_encode($_row, JSON_UNESCAPED_UNICODE)]);
         }
+        $_pdo->commit();
+    } catch (Exception $e) {
+        if ($_pdo->inTransaction()) $_pdo->rollBack();
+        throw $e;
     }
+}
 
-    // 自定义 JSON 表列
-    $_tbls = json_decode($customTblDefJson ?: '[]', true) ?: [];
-    foreach ($_tbls as $_tname => $_cols) {
-        $_tname = preg_replace('/[^A-Za-z0-9_]/', '', (string)$_tname);
-        if ($_tname === '') continue;
-        $_chk = $_pdo->query("SHOW COLUMNS FROM {$_tbl} LIKE '{$_tname}'");
-        if ($_chk->rowCount() === 0) {
-            $_pdo->exec("ALTER TABLE {$_tbl} ADD COLUMN `{$_tname}` JSON DEFAULT NULL");
-        }
+// 追加一行
+function customTableAppend($ConfigId, $userId, $tableName, array $row) {
+    ensureJsonStore($ConfigId);
+    GetPDO()->prepare("INSERT INTO " . _jsonTable($ConfigId) . " (user_id, table_name, row_data) VALUES (:u, :t, :r)")
+        ->execute(['u' => $userId, 't' => $tableName, 'r' => json_encode($row, JSON_UNESCAPED_UNICODE)]);
+}
+
+// 注册/建号时按默认值播种（侧表）
+function seedCustomDefaults($ConfigId, $userId, $varsDefJson, $tblDefJson) {
+    $_vars = json_decode($varsDefJson ?: '{}', true) ?: [];
+    foreach ($_vars as $_n => $_v) {
+        $_n = _safeIdent($_n);
+        if ($_n !== '') customVarSet($ConfigId, $userId, $_n, $_v);
     }
+    $_tbls = json_decode($tblDefJson ?: '{}', true) ?: [];
+    foreach ($_tbls as $_t => $_cols) {
+        $_t = _safeIdent($_t);
+        if ($_t === '' || !is_array($_cols) || empty($_cols)) continue;
+        customTableAppend($ConfigId, $userId, $_t, $_cols);
+    }
+}
+
+// 兼容旧调用点：原“建列”函数改为建侧表（列已不需要）
+function ensureCustomColumns($ConfigId, $customVarsJson = '[]', $customVarsDefJson = '[]', $customTblDefJson = '[]') {
+    ensureVarStore($ConfigId);
+    ensureJsonStore($ConfigId);
 }
 
 // 获取客户端 IP
@@ -233,6 +422,89 @@ function generateUniqueTableName() {
         }
     }
     throw new Exception('表名生成失败，请重试');
+}
+
+// 把实时事件推送给在线成员（tools/ws_server.php）；失败静默，不影响主流程
+function wsPublishToMembers(array $memberIds, array $payload) {
+    static $__sec = null;
+    if ($__sec === null) {
+        $__f = __DIR__ . '/../tools/secrets.php';
+        $__sec = is_file($__f) ? (include $__f) : [];
+    }
+    $token = is_array($__sec) ? ($__sec['ws_internal'] ?? '') : '';
+    if ($token === '') {
+        // 兼容旧的纯文本令牌文件
+        $tokenFile = __DIR__ . '/../tools/ws_internal.token';
+        $token = is_file($tokenFile) ? trim(file_get_contents($tokenFile)) : '';
+    }
+    if ($token === '') return;
+    $body = json_encode([
+        'member_ids' => array_map('intval', $memberIds),
+        'payload'    => $payload,
+    ]);
+    $fp = @fsockopen('127.0.0.1', 2081, $errno, $errstr, 0.4);
+    if (!$fp) return;
+    $req = "POST /publish HTTP/1.0\r\nHost: 127.0.0.1\r\nX-Internal-Token: $token\r\n"
+        . "Content-Type: application/json\r\nContent-Length: " . strlen($body) . "\r\n"
+        . "Connection: close\r\n\r\n" . $body;
+    @fwrite($fp, $req);
+    stream_set_timeout($fp, 0, 300000);
+    @fgets($fp); // 读响应行，确保服务端已派发
+    @fclose($fp);
+}
+
+// ========== 聊天三表助手（chat_conversations/chat_members/chat_messages） ==========
+
+function chatIsMember(PDO $pdo, $chatId, $uid) {
+    $st = $pdo->prepare("SELECT 1 FROM chat_members WHERE chat_id = :c AND user_id = :u LIMIT 1");
+    $st->execute(['c' => $chatId, 'u' => intval($uid)]);
+    return (bool)$st->fetchColumn();
+}
+
+function chatMemberIds(PDO $pdo, $chatId) {
+    $st = $pdo->prepare("SELECT user_id FROM chat_members WHERE chat_id = :c");
+    $st->execute(['c' => $chatId]);
+    return array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
+}
+
+function chatMemberMap(PDO $pdo, $chatId) {
+    $st = $pdo->prepare("SELECT user_id, member_name FROM chat_members WHERE chat_id = :c");
+    $st->execute(['c' => $chatId]);
+    return $st->fetchAll(PDO::FETCH_KEY_PAIR);
+}
+
+function chatMaxMsgId(PDO $pdo, $chatId) {
+    $st = $pdo->prepare("SELECT COALESCE(MAX(msg_id),0) FROM chat_messages WHERE chat_id = :c");
+    $st->execute(['c' => $chatId]);
+    return intval($st->fetchColumn());
+}
+
+// 行记录 → 前端消息对象（保持旧契约：MsgId/SenderId/Type/Time + 类型字段）
+function chatRowToMsg(array $row) {
+    $msg = [
+        'MsgId'    => intval($row['msg_id']),
+        'SenderId' => intval($row['sender_id']),
+        'Type'     => $row['mtype'],
+        'Time'     => date('Y-m-d-H-i-s', strtotime($row['created_at'])),
+    ];
+    $body = json_decode($row['body'] ?? '{}', true);
+    return is_array($body) ? array_merge($msg, $body) : $msg;
+}
+
+// 生成不重复的 chat_id
+function chatNewId(PDO $pdo) {
+    for ($i = 0; $i < 10; $i++) {
+        $id = randomString(21);
+        $st = $pdo->prepare("SELECT COUNT(*) FROM chat_conversations WHERE chat_id = :c");
+        $st->execute(['c' => $id]);
+        if ($st->fetchColumn() == 0) return $id;
+    }
+    throw new Exception('生成对话ID失败');
+}
+
+// 推送该会话全部在线成员（静默失败）
+function chatPushRefresh(PDO $pdo, $chatId, array $extra = []) {
+    wsPublishToMembers(chatMemberIds($pdo, $chatId), array_merge(['type' => 'chat_refresh', 'chat_id' => $chatId], $extra));
 }
 
 // 仅允许字母数字下划线作为 SQL 标识符（表名/列名），防止注入
@@ -301,16 +573,6 @@ if (!isDevMode()) {
 
 // 验证 Tokey（全局版）：用于无需 UserId 的场景，如 notice_update API
 function validateTokeyGlobal($ConfigId, $Tokey) {
-    $_pdo = GetPDO();
-    $_stmt = $_pdo->query("SELECT table_data FROM data_tables_registry");
-    $_all = $_stmt->fetchAll();
-    foreach ($_all as $_row) {
-        $_data = json_decode($_row['table_data'], true) ?: [];
-        foreach ($_data as $_item) {
-            if (($_item['table'] ?? '') === $ConfigId && ($_item['tokey'] ?? '') === $Tokey) {
-                return;
-            }
-        }
-    }
-    throw new Exception('Tokey 验证失败');
+    if (!preg_match('/^[A-Za-z0-9_]{1,64}$/', (string)$ConfigId)) throw new Exception('ConfigId 非法');
+    if (!dbTokeyMatch(GetPDO(), $ConfigId, $Tokey)) throw new Exception('Tokey 验证失败');
 }

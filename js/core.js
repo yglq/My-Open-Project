@@ -1,23 +1,25 @@
+    // ========== API Fetch（统一注入登录凭证） ==========
+    // 所有接口调用走 apiFetch：自动带 UserId + SessionToken，调用处不用管
+    function apiFetch(url, options = {}) {
+        const fd = options.body instanceof FormData ? options.body : new FormData();
+        if (!fd.has('UserId')) fd.append('UserId', localStorage.getItem('UserId') || '');
+        if (!fd.has('SessionToken')) fd.append('SessionToken', localStorage.getItem('SessionToken') || '');
+        return fetch(url, Object.assign({}, options, { method: options.method || 'POST', body: fd }));
+    }
+
     // ========== Login Check ==========
  (async function checkLogin() {
     const UserId = localStorage.getItem('UserId');
-    const Password = localStorage.getItem('Password');
+    const SessionToken = localStorage.getItem('SessionToken');
 
-    if (!UserId || !Password) {
+    if (!UserId || !SessionToken) {
         localStorage.clear();
         window.location.href = '/pages/Login.html';
         return;
     }
 
     try {
-        const _formData = new FormData();
-        _formData.append('UserId', UserId);
-        _formData.append('Password', Password);
-
-        const _res = await fetch('/user/check_login.php', {
-            method: 'POST',
-            body: _formData
-        });
+        const _res = await apiFetch('/user/check_login.php');
         const _data = await _res.json();
 
         if (_data.code !== 0) {
@@ -49,7 +51,7 @@
         pageContainer.innerHTML = '<div class="loading-spinner"></div>';
 
         try {
-            const response = await fetch('pages/' + pageFileMap[pageName]);
+            const response = await fetch('pages/' + pageFileMap[pageName] + '?v=' + window.SITE_VERSION);
             if (!response.ok) throw new Error('Page not found');
             const html = await response.text();
             pageCache[pageName] = html;
@@ -79,7 +81,7 @@
     pageContainer.innerHTML = '<div class="loading-spinner"></div>';
 
     try {
-        const response = await fetch('pages/' + pageName);
+        const response = await fetch('pages/' + pageName + '?v=' + window.SITE_VERSION);
         if (!response.ok) throw new Error('Page not found');
         const html = await response.text();
         subPageCache[pageName] = html;

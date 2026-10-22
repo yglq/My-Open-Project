@@ -1,8 +1,8 @@
 <?php
 /**
- * 创建私聊对话
+ * 创建/获取私聊对话
  * POST: UserId, TargetUserId
- * 如果已存在则返回已有的 chat_id
+ * 新结构：chat_conversations(is_group=0) + chat_members
  */
 require_once __DIR__ . '/../lib/db.php';
 header('Content-Type: application/json; charset=utf-8');
@@ -10,6 +10,7 @@ header('Content-Type: application/json; charset=utf-8');
 try {
 
     requirePost();
+    authUser();
 
     $UserId       = intval($_POST['UserId'] ?? 0);
     $TargetUserId = intval($_POST['TargetUserId'] ?? 0);
@@ -19,73 +20,55 @@ try {
 
     $_pdo = GetPDO();
 
-    // 检查目标用户是否存在且可被搜索
-    $_stmt = $_pdo->prepare("SELECT user_id, nickname, username, status, can_search FROM users WHERE user_id = :uid LIMIT 1");
+    // 对方用户存在且未封禁
+    $_stmt = $_pdo->prepare("SELECT nickname, username, status FROM users WHERE user_id = :uid LIMIT 1");
     $_stmt->execute(['uid' => $TargetUserId]);
     $_target = $_stmt->fetch();
-    if (!$_target) throw new Exception('用户不存在');
-    if ($_target['status'] == 1) throw new Exception('该用户已被封号');
-    if ($_target['can_search'] == 0) throw new Exception('该用户不可被搜索');
-
-    // 获取自己信息
-    $_stmt2 = $_pdo->prepare("SELECT nickname, username FROM users WHERE user_id = :uid LIMIT 1");
-    $_stmt2->execute(['uid' => $UserId]);
-    $_me = $_stmt2->fetch();
-    $_myName = $_me['nickname'] ?: $_me['username'];
+    if (!$_target || $_target['status'] == 1) throw new Exception('对方用户不存在或已封禁');
     $_targetName = $_target['nickname'] ?: $_target['username'];
 
-    // 检查是否已有私聊
-    $_stmt3 = $_pdo->query("SELECT chat_id, chat_json FROM chat_data");
-    $_allChats = $_stmt3->fetchAll();
-    foreach ($_allChats as $_chat) {
-        $_json = json_decode($_chat['chat_json'] ?? '[]', true);
-        $_members = $_json['Members'] ?? [];
-        // 私聊：刚好2人，且包含双方
-        if (count($_members) == 2 
-            && array_key_exists(strval($UserId), $_members) 
-            && array_key_exists(strval($TargetUserId), $_members)) {
-            // 已存在，直接返回
-            echo json_encode([
-                'code'     => 0,
-                'chat_id'  => $_chat['chat_id'],
-                'is_new'   => false,
-                'message'  => '已有对话'
-            ], JSON_UNESCAPED_UNICODE);
-            exit;
-        }
+    // 找已有私聊：两人都在同一个 is_group=0 的会话里
+    $_stmt3 = $_pdo->prepare(
+        "SELECT m1.chat_id FROM chat_members m1
+         JOIN chat_members m2 ON m1.chat_id = m2.chat_id
+         JOIN chat_conversations c ON c.chat_id = m1.chat_id
+         WHERE m1.user_id = :u AND m2.user_id = :t AND c.is_group = 0 LIMIT 1"
+    );
+    $_stmt3->execute(['u' => $UserId, 't' => $TargetUserId]);
+    $_existing = $_stmt3->fetchColumn();
+    if ($_existing) {
+        wsPublishToMembers([$UserId, $TargetUserId], ['type' => 'chat_refresh', 'chat_id' => $_existing]);
+        echo json_encode([
+            'code'    => 0,
+            'chat_id' => $_existing,
+            'is_new'  => false,
+            'message' => '已有对话'
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
     }
 
-    // 不存在，创建新对话
-    $_newChatId = '';
-    for ($_i = 0; $_i < 10; $_i++) {
-        $_tempId = substr(str_shuffle('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'), 0, 21);
-        $_stmt4 = $_pdo->prepare("SELECT COUNT(*) FROM chat_data WHERE chat_id = :cid");
-        $_stmt4->execute(['cid' => $_tempId]);
-        if ($_stmt4->fetchColumn() == 0) {
-            $_newChatId = $_tempId;
-            break;
-        }
+    // 我的名字
+    $_stmtM = $_pdo->prepare("SELECT nickname, username FROM users WHERE user_id = :uid LIMIT 1");
+    $_stmtM->execute(['uid' => $UserId]);
+    $_me = $_stmtM->fetch();
+    $_myName = ($_me['nickname'] ?? '') ?: ($_me['username'] ?? '');
+
+    $_newChatId = chatNewId($_pdo);
+
+    $_pdo->beginTransaction();
+    try {
+        $_pdo->prepare("INSERT INTO chat_conversations (chat_id,is_group,group_name,group_avatar,owner_id,created_at) VALUES (?,0,'','',?,NOW())")
+             ->execute([$_newChatId, $UserId]);
+        $_insM = $_pdo->prepare("INSERT INTO chat_members (chat_id,user_id,member_name,last_read_id,joined_at) VALUES (?,?,?,0,NOW())");
+        $_insM->execute([$_newChatId, $UserId, $_myName]);
+        $_insM->execute([$_newChatId, $TargetUserId, $_targetName]);
+        $_pdo->commit();
+    } catch (Exception $e2) {
+        if ($_pdo->inTransaction()) $_pdo->rollBack();
+        throw $e2;
     }
-    if ($_newChatId === '') throw new Exception('生成对话ID失败');
 
-    $_chatJson = json_encode([
-        'ChatId'  => $_newChatId,
-        'Members' => [
-            strval($UserId)       => $_myName,
-            strval($TargetUserId) => $_targetName
-        ],
-        'TotalMsg' => 0,
-        'ReadList' => [],
-        'Messages' => []
-    ], JSON_UNESCAPED_UNICODE);
-
-    $_stmt5 = $_pdo->prepare("INSERT INTO chat_data (chat_id, chat_json) VALUES (:cid, :json)");
-    $_stmt5->execute(['cid' => $_newChatId, 'json' => $_chatJson]);
-
-    // 更新两人的 chat_list
-    $_newItem = json_encode(['chat_id' => $_newChatId, 'last_msg_id' => 0]);
-    $_pdo->exec("UPDATE users SET chat_list = JSON_ARRAY_APPEND(COALESCE(chat_list, '[]'), '$', CAST('$_newItem' AS JSON)) WHERE user_id = $UserId");
-    $_pdo->exec("UPDATE users SET chat_list = JSON_ARRAY_APPEND(COALESCE(chat_list, '[]'), '$', CAST('$_newItem' AS JSON)) WHERE user_id = $TargetUserId");
+    wsPublishToMembers([$UserId, $TargetUserId], ['type' => 'chat_refresh', 'chat_id' => $_newChatId]);
 
     echo json_encode([
         'code'    => 0,

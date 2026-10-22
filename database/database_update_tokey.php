@@ -5,6 +5,7 @@ header('Content-Type: application/json; charset=utf-8');
 try {
 
     requirePost();
+    authUser();
     $UserId   = intval($_POST['UserId'] ?? 0);
     $ConfigId = trim($_POST['ConfigId'] ?? '');
     $NewTokey = trim($_POST['NewTokey'] ?? '');
@@ -32,6 +33,10 @@ try {
     $_newJson = json_encode($_data, JSON_UNESCAPED_UNICODE);
     $_stmt2 = $_pdo->prepare("UPDATE data_tables_registry SET table_data = :td WHERE user_id = :uid");
     $_stmt2->execute(['td' => $_newJson, 'uid' => $UserId]);
+
+    // 同步配置表 Tokey 字段（成员侧 JSON 里的副本不再参与验证）
+    $_pdo->prepare("UPDATE admin_config SET tokey = :tk WHERE config_id = :cid")
+         ->execute(['tk' => $NewTokey, 'cid' => $ConfigId]);
 
     echo json_encode(['code' => 0, 'message' => '修改成功'], JSON_UNESCAPED_UNICODE);
 } catch (Exception $e) {
